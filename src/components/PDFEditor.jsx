@@ -1,11 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { Download, Type, XCircle, ChevronLeft, ChevronRight, RefreshCw, MousePointer2 } from 'lucide-react';
+import { Download, Type, XCircle, ChevronLeft, ChevronRight, RefreshCw, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+// Helper to map PDF.js font names to pdf-lib standard fonts
+const mapFont = (fontName) => {
+  const name = (fontName || '').toLowerCase();
+  if (name.includes('bold') && name.includes('italic')) {
+    if (name.includes('serif') || name.includes('times')) return StandardFonts.TimesRomanBoldItalic;
+    if (name.includes('mono') || name.includes('courier')) return StandardFonts.CourierBoldOblique;
+    return StandardFonts.HelveticaBoldOblique;
+  }
+  if (name.includes('bold')) {
+    if (name.includes('serif') || name.includes('times')) return StandardFonts.TimesRomanBold;
+    if (name.includes('mono') || name.includes('courier')) return StandardFonts.CourierBold;
+    return StandardFonts.HelveticaBold;
+  }
+  if (name.includes('italic') || name.includes('oblique')) {
+    if (name.includes('serif') || name.includes('times')) return StandardFonts.TimesRomanItalic;
+    if (name.includes('mono') || name.includes('courier')) return StandardFonts.CourierOblique;
+    return StandardFonts.HelveticaOblique;
+  }
+  if (name.includes('serif') || name.includes('times')) return StandardFonts.TimesRoman;
+  if (name.includes('mono') || name.includes('courier')) return StandardFonts.Courier;
+  return StandardFonts.Helvetica;
+};
 
 const PDFEditor = ({ file, onReset }) => {
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -15,16 +38,11 @@ const PDFEditor = ({ file, onReset }) => {
   const canvasRef = useRef(null);
   const renderTaskRef = useRef(null);
   
-  // Custom added texts
   const [texts, setTexts] = useState([]);
-  // Extracted existing text items
   const [extractedItems, setExtractedItems] = useState([]);
-  // Which item is being edited (if any)
   const [editingId, setEditingId] = useState(null);
-  
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load the PDF Document via pdfjs
   useEffect(() => {
     const loadPDF = async () => {
       try {
@@ -41,7 +59,6 @@ const PDFEditor = ({ file, onReset }) => {
     loadPDF();
   }, [file]);
 
-  // Render the current page and extract text
   useEffect(() => {
     if (!pdfDoc) return;
 
@@ -67,25 +84,20 @@ const PDFEditor = ({ file, onReset }) => {
       try {
         await renderTaskRef.current.promise;
         
-        // Extract text content
         const textContent = await page.getTextContent();
         const items = textContent.items.map((item, idx) => {
-          // item.transform is [scaleX, skewX, skewY, scaleY, translateX, translateY]
-          // PDF coordinates (0,0) at bottom-left.
           const tx = item.transform[4];
           const ty = item.transform[5];
-          
-          // Convert PDF coordinates to viewport coordinates
           const [vx, vy] = viewport.convertToViewportPoint(tx, ty);
           
           return {
             id: `orig-${pageNum}-${idx}`,
             text: item.str,
             originalText: item.str,
-            x: tx, // original PDF X
-            y: ty, // original PDF Y
-            vx,    // viewport X for display
-            vy,    // viewport Y for display
+            x: tx,
+            y: ty,
+            vx,
+            vy,
             width: item.width,
             height: item.height,
             fontSize: Math.sqrt(item.transform[0]**2 + item.transform[1]**2),
@@ -95,15 +107,9 @@ const PDFEditor = ({ file, onReset }) => {
           };
         });
         
-        // Only update items for this page that haven't been stored yet 
-        // Or refresh them if we want to keep edits (more complex)
-        // For now, we clear them for the page if they don't have edits.
         setExtractedItems(prev => {
-           // Keep items from other pages, and keep modified items from this page
            const otherPages = prev.filter(i => i.page !== pageNum);
            const modifiedThisPage = prev.filter(i => i.page === pageNum && i.isModified);
-           
-           // For new ones, only add if they aren't already modified
            const newItems = items.filter(ni => !modifiedThisPage.some(mi => mi.id === ni.id));
            return [...otherPages, ...modifiedThisPage, ...newItems];
         });
@@ -125,7 +131,7 @@ const PDFEditor = ({ file, onReset }) => {
       x: 0.5,
       y: 0.5,
       text: "New Text",
-      size: 16,
+      size: 14,
       isNew: true
     };
     setTexts([...texts, newText]);
@@ -148,7 +154,6 @@ const PDFEditor = ({ file, onReset }) => {
     setTexts(texts.filter(t => t.id !== id));
   };
 
-  // Drag text implementation (only for new added texts)
   const dragItem = useRef(null);
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -191,29 +196,35 @@ const PDFEditor = ({ file, onReset }) => {
       pdfLibDoc.registerFontkit(fontkit);
 
       const pages = pdfLibDoc.getPages();
+      const fontCache = {};
 
       // Handle replacements (modified extracted items)
       for (let item of extractedItems) {
         if (item.isModified) {
           const page = pages[item.page - 1];
-          const { height } = page.getSize();
           
-          // 1. Whiteout original text
-          // Note: Width estimation is tricky, we use a heuristic or item.width from pdfjs
-          // pdfjs item.width is in PDF units.
+          // Match font
+          const fontType = mapFont(item.fontName);
+          if (!fontCache[fontType]) {
+            fontCache[fontType] = await pdfLibDoc.embedFont(fontType);
+          }
+          const font = fontCache[fontType];
+
+          // Whiteout
           page.drawRectangle({
-            x: item.x - 2,
-            y: item.y - 2,
-            width: (item.width * 1.1) + 4,
-            height: item.fontSize + 4,
-            color: rgb(1, 1, 1), // White
+            x: item.x - 1,
+            y: item.y - 1,
+            width: (item.width * 1.05) + 2,
+            height: item.fontSize + 2,
+            color: rgb(1, 1, 1),
           });
 
-          // 2. Draw new text
+          // Draw new text with matched font
           page.drawText(item.text, {
             x: item.x,
             y: item.y,
             size: item.fontSize,
+            font: font,
             color: rgb(0, 0, 0),
           });
         }
@@ -224,14 +235,15 @@ const PDFEditor = ({ file, onReset }) => {
         const page = pages[t.page - 1];
         const { width, height } = page.getSize();
         
-        const textSizeInPdf = t.size; 
+        const font = await pdfLibDoc.embedFont(StandardFonts.Helvetica);
         const xPos = t.x * width;
-        const yPos = height - (t.y * height) - (textSizeInPdf);
+        const yPos = height - (t.y * height) - (t.size);
 
         page.drawText(t.text, {
           x: xPos,
           y: yPos,
-          size: textSizeInPdf,
+          size: t.size,
+          font: font,
           color: rgb(0, 0, 0)
         });
       }
@@ -264,34 +276,50 @@ const PDFEditor = ({ file, onReset }) => {
         </div>
         
         <div className="toolbar-group">
-          <div className="toolbar-title">Pages ({pageNum}/{numPages})</div>
+          <div className="toolbar-title">Navigation</div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button 
               className="btn btn-secondary" 
               onClick={() => { setPageNum(p => Math.max(1, p - 1)); setEditingId(null); }}
               disabled={pageNum <= 1}
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '0.5rem' }}
             >
-              <ChevronLeft size={16} /> Prev
+              <ChevronLeft size={16} />
             </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, fontSize: '0.9rem' }}>
+              {pageNum} / {numPages}
+            </div>
             <button 
               className="btn btn-secondary" 
               onClick={() => { setPageNum(p => Math.min(numPages, p + 1)); setEditingId(null); }}
               disabled={pageNum >= numPages}
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '0.5rem' }}
             >
-              Next <ChevronRight size={16} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
 
-        <div className="toolbar-group" style={{ marginTop: '1rem' }}>
+        <div className="toolbar-group">
+          <div className="toolbar-title">Zoom</div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => setScale(s => Math.max(0.5, s - 0.25))} style={{ flex: 1, padding: '0.5rem' }}>
+              <ZoomOut size={16} />
+            </button>
+            <button className="btn btn-secondary" onClick={() => setScale(s => Math.min(3, s + 0.25))} style={{ flex: 1, padding: '0.5rem' }}>
+              <ZoomIn size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="toolbar-group">
           <div className="toolbar-title">Tools</div>
           <button className="btn btn-secondary" onClick={addText}>
-            <Type size={16} /> Add New Text
+            <Type size={16} /> Add Text Box
           </button>
-          <div style={{fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '5px'}}>
-            <MousePointer2 size={10} inline /> Click existing text to edit it
+          <div style={{fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', lineHeight: '1.4'}}>
+            <MousePointer2 size={10} style={{verticalAlign: 'middle', marginRight: '4px'}} /> 
+            Click any text in the document to edit it directly.
           </div>
         </div>
 
@@ -299,11 +327,11 @@ const PDFEditor = ({ file, onReset }) => {
 
         <div className="toolbar-group">
           <button className="btn btn-primary" onClick={downloadPDF} disabled={isProcessing}>
-            {isProcessing ? <RefreshCw className="spinner" style={{width: 16, height: 16}} /> : <Download size={16} />}
-            {isProcessing ? 'Processing...' : 'Download PDF'}
+            {isProcessing ? <RefreshCw className="spinner" size={16} /> : <Download size={16} />}
+            {isProcessing ? 'Saving...' : 'Save & Download'}
           </button>
           <button className="btn btn-secondary" onClick={onReset} style={{ marginTop: '0.5rem', color: '#ff4d4d', borderColor: 'rgba(255, 77, 77, 0.2)' }}>
-            <XCircle size={16} /> Close Document
+            <XCircle size={16} /> Close
           </button>
         </div>
       </aside>
@@ -313,10 +341,10 @@ const PDFEditor = ({ file, onReset }) => {
           className="canvas-container" 
           onPointerMove={handlePointerMove}
         >
-          <div style={{ position: 'relative', margin: '2rem auto', display: 'inline-block' }}>
-            <canvas ref={canvasRef} style={{ display: 'block' }} />
+          <div style={{ position: 'relative', margin: '2rem', display: 'inline-block', transition: 'transform 0.2s ease' }}>
+            <canvas ref={canvasRef} style={{ display: 'block', borderRadius: '4px' }} />
             
-            {/* HIT AREAS for existing text */}
+            {/* Existing Text Edit Layers */}
             {!dragItem.current && currentExtracted.map(item => (
               <div
                 key={item.id}
@@ -324,16 +352,16 @@ const PDFEditor = ({ file, onReset }) => {
                 onClick={() => setEditingId(item.id)}
                 style={{
                   left: item.vx,
-                  top: item.vy - (item.fontSize * scale), // Adjust because vy is baseline in converter usually
-                  width: item.width * scale,
-                  height: item.fontSize * scale,
+                  top: item.vy - (item.fontSize * scale * 0.9), // Fine-tuned vertical alignment
+                  width: Math.max(item.width * scale, 20),
+                  height: item.fontSize * scale * 1.2,
                   position: 'absolute',
                   cursor: 'text',
                   display: 'flex',
                   alignItems: 'center',
-                  // Hide original text by using a solid background when modified
                   background: item.isModified && editingId !== item.id ? 'white' : 'transparent',
-                  color: 'black'
+                  overflow: 'visible',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {editingId === item.id ? (
@@ -346,16 +374,19 @@ const PDFEditor = ({ file, onReset }) => {
                     onKeyDown={(e) => e.key === 'Enter' && setEditingId(null)}
                     style={{
                       fontSize: item.fontSize * scale,
-                      width: '100%',
-                      height: '100%'
+                      width: 'auto',
+                      minWidth: '100%',
+                      height: '100%',
+                      fontFamily: item.fontName ? 'serif' : 'sans-serif' // Minimal visual hint
                     }}
                   />
                 ) : (
                   item.isModified && (
                     <span style={{ 
                       fontSize: item.fontSize * scale, 
-                      whiteSpace: 'nowrap',
-                      pointerEvents: 'none'
+                      color: 'black',
+                      pointerEvents: 'none',
+                      fontFamily: item.fontName ? 'serif' : 'sans-serif'
                     }}>
                       {item.text}
                     </span>
@@ -364,7 +395,7 @@ const PDFEditor = ({ file, onReset }) => {
               </div>
             ))}
 
-            {/* Overlays for NEW added texts */}
+            {/* New Text Boxes Overlay */}
             {canvasRef.current && currentTexts.map(t => (
               <div 
                 key={t.id}
