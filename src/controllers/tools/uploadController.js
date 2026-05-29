@@ -7,6 +7,26 @@ export const getUploadedFiles = async (request) => {
 };
 
 export const validateToolUpload = ({ tool, files }) => {
+  if (tool.id === 'addAttachments') {
+    if (files.length < 2) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Add Attachments To PDF requires a PDF file followed by at least one attachment.',
+      };
+    }
+
+    if (files[0].type !== 'application/pdf') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'The first file must be the PDF that will receive attachments.',
+      };
+    }
+
+    return { ok: true };
+  }
+
   if (tool.acceptedTypes.length === 0) {
     return { ok: true };
   }

@@ -732,6 +732,11 @@ export default function ToolUploadPanel({ tool }) {
 
   const acceptsPdf = tool.acceptedTypes.length === 0 || tool.acceptedTypes.includes('application/pdf');
   const acceptsMultiple = tool.uploadMode === 'multiple';
+  const fileAccept = tool.id === 'addAttachments'
+    ? 'application/pdf,.pdf,text/plain,image/png,image/jpeg,application/octet-stream'
+    : acceptsPdf ? 'application/pdf,.pdf' : undefined;
+  const fileRequired = tool.acceptedTypes.length > 0 || tool.id === 'addAttachments';
+  const needsFiles = fileRequired;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -785,24 +790,32 @@ export default function ToolUploadPanel({ tool }) {
     >
       <fieldset>
         <legend>{tool.name}</legend>
-        <div className="field">
-          <label htmlFor={inputId}>PDF file{acceptsMultiple ? 's' : ''}</label>
-          <input
-            id={inputId}
-            name="files"
-            type="file"
-            accept={acceptsPdf ? 'application/pdf,.pdf' : undefined}
-            multiple={acceptsMultiple}
-            required={tool.acceptedTypes.length > 0}
-            aria-describedby={`${helpId} ${statusId}`}
-            onChange={(event) => setFiles(Array.from(event.target.files || []))}
-          />
+        {needsFiles ? (
+          <div className="field">
+            <label htmlFor={inputId}>PDF file{acceptsMultiple ? 's' : ''}</label>
+            <input
+              id={inputId}
+              name="files"
+              type="file"
+              accept={fileAccept}
+              multiple={acceptsMultiple}
+              required={fileRequired}
+              aria-describedby={`${helpId} ${statusId}`}
+              onChange={(event) => setFiles(Array.from(event.target.files || []))}
+            />
+            <p id={helpId} className="field-help">
+              {tool.id === 'addAttachments'
+                ? 'Select the target PDF first, then one or more files to embed as attachments.'
+                : acceptsMultiple
+                  ? 'Select one or more PDF files for this tool.'
+                  : 'Select one PDF file for this tool.'}
+            </p>
+          </div>
+        ) : (
           <p id={helpId} className="field-help">
-            {acceptsMultiple
-              ? 'Select one or more PDF files for this tool.'
-              : 'Select one PDF file for this tool.'}
+            This guide endpoint does not require an uploaded file.
           </p>
-        </div>
+        )}
 
         <input name="toolId" type="hidden" value={tool.id} />
         <ToolParameterFields tool={tool} />

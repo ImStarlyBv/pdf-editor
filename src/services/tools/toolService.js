@@ -1006,6 +1006,234 @@ const showJavascript = async ({ files }) => {
   };
 };
 
+const addAttachments = async ({ files }) => {
+  if (files.length < 2) {
+    throw new Error('Add Attachments To PDF requires a PDF file and at least one attachment.');
+  }
+
+  const [file, ...attachments] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+
+  if (typeof document.attach !== 'function') {
+    throw new Error('This runtime does not support embedding PDF attachments.');
+  }
+
+  for (const attachment of attachments) {
+    await document.attach(await attachment.arrayBuffer(), attachment.name, {
+      mimeType: attachment.type || 'application/octet-stream',
+      description: `Attached file: ${attachment.name}`,
+      creationDate: new Date(),
+      modificationDate: new Date(),
+    });
+  }
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_attachments.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const compressPdf = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+
+  return {
+    kind: 'file',
+    bytes: await document.save({
+      useObjectStreams: true,
+      objectsPerTick: 50,
+    }),
+    filename: makeOutputFilename(file.name, '_compressed.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const repairPdf = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), {
+    ignoreEncryption: false,
+    updateMetadata: false,
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save({
+      useObjectStreams: true,
+      addDefaultPage: false,
+    }),
+    filename: makeOutputFilename(file.name, '_repaired.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const getDocumentSummary = (document) => ({
+  title: document.getTitle() || null,
+  author: document.getAuthor() || null,
+  subject: document.getSubject() || null,
+  keywords: document.getKeywords() || [],
+  creator: document.getCreator() || null,
+  producer: document.getProducer() || null,
+  pageCount: document.getPageCount(),
+  pages: document.getPages().map((page, index) => ({
+    pageNumber: index + 1,
+    width: page.getWidth(),
+    height: page.getHeight(),
+    rotation: page.getRotation().angle,
+  })),
+});
+
+const getReadableDocumentText = (document) =>
+  document.getPages().map((page, index) => {
+    const text = getPageContentObjects(document, page)
+      .map((object) => {
+        if (typeof object?.getContentsString === 'function') {
+          return object.getContentsString();
+        }
+
+        if (typeof object?.getContents === 'function') {
+          return new TextDecoder('latin1').decode(object.getContents());
+        }
+
+        return '';
+      })
+      .join('\n')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return {
+      pageNumber: index + 1,
+      contentStreamPreview: text.slice(0, 1500),
+    };
+  });
+
+const slugifyFilename = (value) => {
+  const slug = (value || '')
+    .normalize('NFKD')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+
+  return slug || 'renamed-pdf';
+};
+
+const autoRenamePdf = async ({ files }) => {
+  const [file] = files;
+  const bytes = await file.arrayBuffer();
+  const document = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const title = document.getTitle();
+  const baseName = title || makeOutputFilename(file.name, '').replace(/\.pdf$/i, '');
+
+  return {
+    kind: 'file',
+    bytes: new Uint8Array(bytes),
+    filename: `${slugifyFilename(baseName)}.pdf`,
+    contentType: 'application/pdf',
+  };
+};
+
+const comparePdfs = async ({ files }) => {
+  if (files.length < 2) {
+    throw new Error('Compare PDFs requires at least two PDF files.');
+  }
+
+  const [leftFile, rightFile] = files;
+  const leftDocument = await PDFDocument.load(await leftFile.arrayBuffer(), { ignoreEncryption: true });
+  const rightDocument = await PDFDocument.load(await rightFile.arrayBuffer(), { ignoreEncryption: true });
+  const left = getDocumentSummary(leftDocument);
+  const right = getDocumentSummary(rightDocument);
+  const maxPages = Math.max(left.pageCount, right.pageCount);
+  const pageDifferences = Array.from({ length: maxPages }, (_, index) => {
+    const leftPage = left.pages[index] || null;
+    const rightPage = right.pages[index] || null;
+
+    return {
+      pageNumber: index + 1,
+      existsInLeft: Boolean(leftPage),
+      existsInRight: Boolean(rightPage),
+      sameSize: Boolean(leftPage && rightPage && leftPage.width === rightPage.width && leftPage.height === rightPage.height),
+      sameRotation: Boolean(leftPage && rightPage && leftPage.rotation === rightPage.rotation),
+    };
+  });
+  const payload = {
+    files: [leftFile.name, rightFile.name],
+    samePageCount: left.pageCount === right.pageCount,
+    pageCountDifference: left.pageCount - right.pageCount,
+    metadataDifferences: {
+      title: left.title !== right.title,
+      author: left.author !== right.author,
+      subject: left.subject !== right.subject,
+      keywords: JSON.stringify(left.keywords) !== JSON.stringify(right.keywords),
+    },
+    pageDifferences,
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'comparison.json',
+    contentType: 'application/json',
+  };
+};
+
+const readPdf = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+  const payload = {
+    fileName: file.name,
+    summary: getDocumentSummary(document),
+    pages: getReadableDocumentText(document),
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'read-pdf.json',
+    contentType: 'application/json',
+  };
+};
+
+const productGuidePayloads = {
+  devApi: {
+    title: 'PDF API',
+    status: 'first-pass',
+    summary: 'Use the same registered tool IDs through POST /api/tools/[toolId]. File tools accept multipart/form-data with files in the files field.',
+    examples: ['POST /api/tools/merge', 'POST /api/tools/compress', 'POST /api/tools/getPdfInfo'],
+  },
+  devFolderScanning: {
+    title: 'Folder Scanning',
+    status: 'planning',
+    summary: 'Folder scanning will watch configured directories and submit matched PDFs to registered tool workflows.',
+    nextSteps: ['Define watched folders', 'Map folder rules to tool IDs', 'Add persisted job history when TypeORM is introduced'],
+  },
+  devSsoGuide: {
+    title: 'SSO Guide',
+    status: 'planning',
+    summary: 'SSO deployment guidance will cover identity provider metadata, callback URLs, claims mapping, and role assignment.',
+    supportedFutureProviders: ['OIDC', 'SAML'],
+  },
+  devAirgapped: {
+    title: 'Air-Gapped PDF Tools',
+    status: 'planning',
+    summary: 'Air-gapped deployment guidance will focus on offline Docker images, local-only processing, and disabled network integrations.',
+    checklist: ['Preload Docker image', 'Mount local temp storage', 'Disable remote callbacks', 'Verify bundled PDF binaries'],
+  },
+};
+
+const productGuide = async ({ tool }) => ({
+  kind: 'file',
+  bytes: textBytes(JSON.stringify({
+    toolId: tool.id,
+    route: tool.nextEndpoint,
+    ...productGuidePayloads[tool.id],
+  }, null, 2)),
+  filename: `${tool.slug}.json`,
+  contentType: 'application/json',
+});
+
 const padToMultipleOf4 = (pageCount) => Math.ceil(pageCount / 4) * 4;
 
 const getBookletSides = ({ totalPages, doubleSided, duplexPass, flipOnShortEdge }) => {
@@ -1671,12 +1899,20 @@ const rotatePdf = async ({ files, formData }) => {
 
 const toolHandlers = {
   addStamp,
+  addAttachments,
   addText,
   addPageNumbers,
   annotate: annotatePdf,
+  autoRename: autoRenamePdf,
   bookletImposition,
   changeMetadata: editMetadata,
+  compare: comparePdfs,
+  compress: compressPdf,
   crop: cropPdf,
+  devAirgapped: productGuide,
+  devApi: productGuide,
+  devFolderScanning: productGuide,
+  devSsoGuide: productGuide,
   extractPages,
   flatten: flattenPdf,
   formFill,
@@ -1685,6 +1921,8 @@ const toolHandlers = {
   overlayPdfs,
   pageLayout,
   pdfToSinglePage,
+  read: readPdf,
+  repair: repairPdf,
   removeBlanks,
   removeAnnotations,
   removePages,
