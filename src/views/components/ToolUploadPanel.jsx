@@ -84,6 +84,29 @@ function ToolParameterFields({ tool }) {
   const metadataModificationDateId = useId();
   const metadataDeleteAllId = useId();
   const metadataHelpId = useId();
+  const flattenOnlyFormsId = useId();
+  const flattenRenderDpiId = useId();
+  const flattenHelpId = useId();
+  const textToolTextId = useId();
+  const textToolPagesId = useId();
+  const textToolXId = useId();
+  const textToolYId = useId();
+  const textToolFontSizeId = useId();
+  const textToolColorId = useId();
+  const textToolOpacityId = useId();
+  const textToolRotationId = useId();
+  const textToolHelpId = useId();
+  const annotationTextId = useId();
+  const annotationPagesId = useId();
+  const annotationXId = useId();
+  const annotationYId = useId();
+  const annotationWidthId = useId();
+  const annotationHeightId = useId();
+  const annotationColorId = useId();
+  const annotationHelpId = useId();
+  const formFillValuesId = useId();
+  const formFillFlattenId = useId();
+  const formFillHelpId = useId();
 
   if (tool.id === 'split') {
     return (
@@ -350,6 +373,141 @@ function ToolParameterFields({ tool }) {
         </div>
         <p id={metadataHelpId} className="field-help">
           Empty fields leave existing metadata unchanged unless delete standard metadata is selected.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'flatten') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field checkbox-field">
+            <input id={flattenOnlyFormsId} name="flattenOnlyForms" type="checkbox" value="true" aria-describedby={flattenHelpId} />
+            <label htmlFor={flattenOnlyFormsId}>Flatten form fields only</label>
+          </div>
+          <div className="field">
+            <label htmlFor={flattenRenderDpiId}>Render DPI</label>
+            <input id={flattenRenderDpiId} name="renderDpi" type="number" min="72" max="300" step="1" defaultValue="100" aria-describedby={flattenHelpId} />
+          </div>
+        </div>
+        <p id={flattenHelpId} className="field-help">
+          Leave the checkbox off to rasterize each page into unselectable PDF pages. Turn it on to flatten only interactive form fields.
+        </p>
+      </div>
+    );
+  }
+
+  if (['addText', 'sign', 'watermark', 'addStamp'].includes(tool.id)) {
+    const defaults = {
+      addText: { text: 'New text', fontSize: 18, color: '#000000', opacity: 1, rotation: 0 },
+      sign: { text: 'Signed', fontSize: 28, color: '#000000', opacity: 1, rotation: 0 },
+      watermark: { text: 'Watermark', fontSize: 48, color: '#888888', opacity: 0.3, rotation: 35 },
+      addStamp: { text: 'APPROVED', fontSize: 30, color: '#c1121f', opacity: 1, rotation: 0 },
+    }[tool.id];
+
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field">
+          <label htmlFor={textToolTextId}>Text</label>
+          <input id={textToolTextId} name="text" type="text" defaultValue={defaults.text} required aria-describedby={textToolHelpId} />
+        </div>
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={textToolPagesId}>Pages</label>
+            <input id={textToolPagesId} name="pages" type="text" defaultValue="all" aria-describedby={textToolHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolXId}>X</label>
+            <input id={textToolXId} name="x" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolYId}>Y</label>
+            <input id={textToolYId} name="y" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolFontSizeId}>Font size</label>
+            <input id={textToolFontSizeId} name="fontSize" type="number" min="1" step="1" defaultValue={defaults.fontSize} required />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolColorId}>Color</label>
+            <input id={textToolColorId} name="fontColor" type="text" defaultValue={defaults.color} pattern="#?[0-9A-Fa-f]{6}" aria-describedby={textToolHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolOpacityId}>Opacity</label>
+            <input id={textToolOpacityId} name="opacity" type="number" min="0" max="1" step="0.05" defaultValue={defaults.opacity} />
+          </div>
+          <div className="field">
+            <label htmlFor={textToolRotationId}>Rotation</label>
+            <input id={textToolRotationId} name="rotation" type="number" step="1" defaultValue={defaults.rotation} />
+          </div>
+        </div>
+        <p id={textToolHelpId} className="field-help">
+          Use pages like all or 1,3-5. Coordinates are PDF points from the lower-left page corner.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'annotate') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field">
+          <label htmlFor={annotationTextId}>Annotation text</label>
+          <input id={annotationTextId} name="text" type="text" defaultValue="Note" aria-describedby={annotationHelpId} />
+        </div>
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={annotationPagesId}>Pages</label>
+            <input id={annotationPagesId} name="pages" type="text" defaultValue="1" aria-describedby={annotationHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={annotationXId}>X</label>
+            <input id={annotationXId} name="x" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={annotationYId}>Y</label>
+            <input id={annotationYId} name="y" type="number" min="0" step="1" defaultValue="120" />
+          </div>
+          <div className="field">
+            <label htmlFor={annotationWidthId}>Width</label>
+            <input id={annotationWidthId} name="width" type="number" min="1" step="1" defaultValue="180" required />
+          </div>
+          <div className="field">
+            <label htmlFor={annotationHeightId}>Height</label>
+            <input id={annotationHeightId} name="height" type="number" min="1" step="1" defaultValue="36" required />
+          </div>
+          <div className="field">
+            <label htmlFor={annotationColorId}>Color</label>
+            <input id={annotationColorId} name="color" type="text" defaultValue="#fff176" pattern="#?[0-9A-Fa-f]{6}" aria-describedby={annotationHelpId} />
+          </div>
+        </div>
+        <p id={annotationHelpId} className="field-help">
+          This first pass adds visible highlight-style markup to selected pages.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'formFill') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field">
+          <label htmlFor={formFillValuesId}>Field values</label>
+          <textarea
+            id={formFillValuesId}
+            name="fieldValues"
+            rows={6}
+            aria-describedby={formFillHelpId}
+            defaultValue={'name=Ada Lovelace\nemail=ada@example.com'}
+          />
+        </div>
+        <div className="field checkbox-field">
+          <input id={formFillFlattenId} name="flatten" type="checkbox" value="true" aria-describedby={formFillHelpId} />
+          <label htmlFor={formFillFlattenId}>Flatten after filling</label>
+        </div>
+        <p id={formFillHelpId} className="field-help">
+          Enter one field per line as fieldName=value, or paste a JSON object with field names and values.
         </p>
       </div>
     );

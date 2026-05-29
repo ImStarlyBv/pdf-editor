@@ -1,4 +1,12 @@
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { promisify } from 'node:util';
+import { degrees, PDFDocument, PDFName, rgb, StandardFonts } from 'pdf-lib';
+
+const execFileAsync = promisify(execFile);
 
 const makeOutputFilename = (filename, suffix) => {
   const safeName = filename?.replace(/[\\/:*?"<>|]+/g, '').trim() || 'document.pdf';
@@ -97,6 +105,76 @@ const parseHexColor = (value) => {
   );
 };
 
+const getStandardFont = (fontType) => {
+  switch ((fontType || 'helvetica').toString().toLowerCase()) {
+    case 'courier':
+      return StandardFonts.Courier;
+    case 'times':
+    case 'times-roman':
+      return StandardFonts.TimesRoman;
+    case 'helvetica':
+    default:
+      return StandardFonts.Helvetica;
+  }
+};
+
+const getTextDrawOptions = async ({ document, formData, defaults = {} }) => {
+  const font = await document.embedFont(getStandardFont(formData.get('fontType') || defaults.fontType));
+  return {
+    text: formData.get('text')?.toString() || defaults.text || 'Approved',
+    font,
+    fontSize: getPositiveNumber({
+      value: formData.get('fontSize'),
+      fallback: defaults.fontSize || 24,
+      label: 'Font size',
+    }),
+    color: parseHexColor(formData.get('fontColor')?.toString() || defaults.fontColor || '#000000'),
+    opacity: Math.max(0, Math.min(1, Number(formData.get('opacity') ?? defaults.opacity ?? 1))),
+    x: getNonNegativeNumber({ value: formData.get('x'), fallback: defaults.x || 48, label: 'X position' }),
+    y: getNonNegativeNumber({ value: formData.get('y'), fallback: defaults.y || 48, label: 'Y position' }),
+    rotation: Number(formData.get('rotation') ?? defaults.rotation ?? 0),
+  };
+};
+
+const drawTextOnPages = async ({ files, formData, defaults, suffix }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const options = await getTextDrawOptions({ document, formData, defaults });
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || 'all',
+    totalPages: document.getPageCount(),
+    label: 'pages',
+  });
+  const pageSet = new Set(pageIndices);
+
+  document.getPages().forEach((page, index) => {
+    if (!pageSet.has(index)) {
+      return;
+    }
+
+    const textWidth = options.font.widthOfTextAtSize(options.text, options.fontSize);
+    const drawX = defaults?.center ? (page.getWidth() - textWidth) / 2 : options.x;
+    const drawY = defaults?.center ? page.getHeight() / 2 : options.y;
+
+    page.drawText(options.text, {
+      x: drawX,
+      y: drawY,
+      size: options.fontSize,
+      font: options.font,
+      color: options.color,
+      opacity: options.opacity,
+      rotate: degrees(options.rotation),
+    });
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, suffix),
+    contentType: 'application/pdf',
+  };
+};
+
 const getMarginFactor = (customMargin) => {
   switch ((customMargin || 'medium').toLowerCase()) {
     case 'small':
@@ -140,6 +218,38 @@ const parsePdfDate = (value) => {
 };
 
 const formatPdfDate = (date) => (date instanceof Date ? date.toISOString() : null);
+
+const getRenderDpi = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return 100;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 72) {
+    throw new Error('Render DPI must be 72 or greater.');
+  }
+
+  return Math.min(parsed, 300);
+};
+
+const runGhostscript = async (args) => {
+  const commands = process.platform === 'win32'
+    ? ['gswin64c', 'gswin32c', 'gs']
+    : ['gs'];
+  const errors = [];
+
+  for (const command of commands) {
+    try {
+      await execFileAsync(command, args, { windowsHide: true });
+      return;
+    } catch (error) {
+      errors.push(`${command}: ${error.stderr || error.message}`);
+    }
+  }
+
+  throw new Error(`Ghostscript is required for full-page flattening. Tried ${commands.join(', ')}. ${errors.join(' ')}`);
+};
 
 const crcTable = new Uint32Array(256).map((_, index) => {
   let value = index;
@@ -610,6 +720,282 @@ const getPdfInfo = async ({ files }) => {
       height: page.getHeight(),
       rotation: page.getRotation().angle,
     })),
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'response.json',
+    contentType: 'application/json',
+  };
+};
+
+const flattenPdf = async ({ files, formData }) => {
+  const [file] = files;
+  const flattenOnlyForms = getBoolean(formData.get('flattenOnlyForms'), false);
+
+  if (flattenOnlyForms) {
+    const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+    const form = document.getForm();
+
+    form.flatten();
+
+    return {
+      kind: 'file',
+      bytes: await document.save(),
+      filename: makeOutputFilename(file.name, '_flattened.pdf'),
+      contentType: 'application/pdf',
+    };
+  }
+
+  const renderDpi = getRenderDpi(formData.get('renderDpi'));
+  const workDir = await mkdtemp(path.join(tmpdir(), `pdf-flatten-${randomUUID()}-`));
+  const inputPath = path.join(workDir, 'input.pdf');
+  const outputPath = path.join(workDir, 'output.pdf');
+
+  try {
+    await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
+    await runGhostscript([
+      '-dSAFER',
+      '-dBATCH',
+      '-dNOPAUSE',
+      '-dAutoRotatePages=/None',
+      '-sDEVICE=pdfimage24',
+      `-r${renderDpi}`,
+      `-sOutputFile=${outputPath}`,
+      inputPath,
+    ]);
+
+    return {
+      kind: 'file',
+      bytes: await readFile(outputPath),
+      filename: makeOutputFilename(file.name, '_flattened.pdf'),
+      contentType: 'application/pdf',
+    };
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
+};
+
+const addText = async ({ files, formData }) =>
+  drawTextOnPages({
+    files,
+    formData,
+    defaults: { text: 'New text', fontSize: 18, x: 72, y: 72 },
+    suffix: '_text_added.pdf',
+  });
+
+const signPdf = async ({ files, formData }) =>
+  drawTextOnPages({
+    files,
+    formData,
+    defaults: { text: 'Signed', fontSize: 28, x: 72, y: 72, fontType: 'times' },
+    suffix: '_signed.pdf',
+  });
+
+const addWatermark = async ({ files, formData }) =>
+  drawTextOnPages({
+    files,
+    formData,
+    defaults: {
+      text: 'Watermark',
+      fontSize: 48,
+      fontColor: '#888888',
+      opacity: 0.3,
+      rotation: 35,
+      center: true,
+    },
+    suffix: '_watermarked.pdf',
+  });
+
+const addStamp = async ({ files, formData }) =>
+  drawTextOnPages({
+    files,
+    formData,
+    defaults: { text: 'APPROVED', fontSize: 30, fontColor: '#c1121f', x: 72, y: 72 },
+    suffix: '_stamped.pdf',
+  });
+
+const annotatePdf = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || '1',
+    totalPages: document.getPageCount(),
+    label: 'pages to annotate',
+  });
+  const x = getNonNegativeNumber({ value: formData.get('x'), fallback: 72, label: 'X position' });
+  const y = getNonNegativeNumber({ value: formData.get('y'), fallback: 120, label: 'Y position' });
+  const width = getPositiveNumber({ value: formData.get('width'), fallback: 180, label: 'Annotation width' });
+  const height = getPositiveNumber({ value: formData.get('height'), fallback: 36, label: 'Annotation height' });
+  const color = parseHexColor(formData.get('color')?.toString() || '#fff176');
+  const text = formData.get('text')?.toString() || '';
+  const font = await document.embedFont(StandardFonts.Helvetica);
+
+  pageIndices.forEach((pageIndex) => {
+    const page = document.getPage(pageIndex);
+    page.drawRectangle({ x, y, width, height, color, opacity: 0.45 });
+
+    if (text) {
+      page.drawText(text, {
+        x: x + 8,
+        y: y + Math.max(8, height / 2 - 6),
+        size: Math.min(12, Math.max(8, height - 8)),
+        font,
+        color: rgb(0, 0, 0),
+      });
+    }
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_annotated.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const clearInteractivePdfEntries = (document, { removeAnnotations = false } = {}) => {
+  const catalogKeys = ['OpenAction', 'AA', 'Names', 'AcroForm'];
+
+  catalogKeys.forEach((key) => {
+    if (typeof document.catalog.delete === 'function') {
+      document.catalog.delete(PDFName.of(key));
+    } else if (document.catalog.dict && typeof document.catalog.dict.delete === 'function') {
+      document.catalog.dict.delete(PDFName.of(key));
+    }
+  });
+
+  if (removeAnnotations) {
+    document.getPages().forEach((page) => {
+      page.node.delete(PDFName.of('Annots'));
+    });
+  }
+};
+
+const removeAnnotations = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  clearInteractivePdfEntries(document, { removeAnnotations: true });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_annotations_removed.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const sanitizePdf = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  clearInteractivePdfEntries(document, { removeAnnotations: true });
+  document.setTitle('');
+  document.setAuthor('');
+  document.setSubject('');
+  document.setKeywords([]);
+  document.setCreator('');
+  document.setProducer('');
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_sanitized.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const unlockPdfForms = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const form = document.getForm();
+
+  form.getFields().forEach((field) => {
+    if (typeof field.enableReadOnly === 'function') {
+      field.enableReadOnly(false);
+    }
+    if (typeof field.disableReadOnly === 'function') {
+      field.disableReadOnly();
+    }
+    if (typeof field.enableRequired === 'function') {
+      field.enableRequired(false);
+    }
+    if (typeof field.disableRequired === 'function') {
+      field.disableRequired();
+    }
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_forms_unlocked.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const parseFieldValues = (formData) => {
+  const raw = formData.get('fieldValues')?.toString();
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return Object.fromEntries(raw.split(/\r?\n/).map((line) => {
+      const separator = line.indexOf('=');
+      return separator === -1
+        ? [line.trim(), '']
+        : [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+    }).filter(([name]) => name));
+  }
+};
+
+const formFill = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const form = document.getForm();
+  const values = parseFieldValues(formData);
+
+  Object.entries(values).forEach(([name, value]) => {
+    const field = form.getFieldMaybe(name);
+
+    if (!field) {
+      return;
+    }
+
+    const stringValue = Array.isArray(value) ? value[0]?.toString() || '' : value?.toString() || '';
+
+    if (typeof field.setText === 'function') field.setText(stringValue);
+    else if (typeof field.select === 'function') field.select(stringValue);
+    else if (typeof field.check === 'function' && ['true', 'on', 'yes', '1'].includes(stringValue.toLowerCase())) field.check();
+    else if (typeof field.uncheck === 'function') field.uncheck();
+  });
+
+  if (getBoolean(formData.get('flatten'), false)) {
+    form.flatten();
+  }
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_filled.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const showJavascript = async ({ files }) => {
+  const [file] = files;
+  const text = new TextDecoder('latin1').decode(await file.arrayBuffer());
+  const matches = [...text.matchAll(/\/(?:JavaScript|JS)\b[\s\S]{0,500}/g)].map((match, index) => ({
+    index: index + 1,
+    preview: match[0].replace(/\s+/g, ' ').slice(0, 500),
+  }));
+  const payload = {
+    fileName: file.name,
+    javascriptEntryCount: matches.length,
+    entries: matches,
   };
 
   return {
@@ -1284,22 +1670,33 @@ const rotatePdf = async ({ files, formData }) => {
 };
 
 const toolHandlers = {
+  addStamp,
+  addText,
   addPageNumbers,
+  annotate: annotatePdf,
   bookletImposition,
   changeMetadata: editMetadata,
   crop: cropPdf,
   extractPages,
+  flatten: flattenPdf,
+  formFill,
   getPdfInfo,
   merge: mergePdfs,
   overlayPdfs,
   pageLayout,
   pdfToSinglePage,
   removeBlanks,
+  removeAnnotations,
   removePages,
   reorganizePages,
   rotate: rotatePdf,
   scalePages,
+  sanitize: sanitizePdf,
+  showJS: showJavascript,
+  sign: signPdf,
   split: splitPdf,
+  unlockPDFForms: unlockPdfForms,
+  watermark: addWatermark,
 };
 
 export const runTool = async ({ tool, files, formData }) => {
