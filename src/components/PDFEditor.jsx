@@ -1,11 +1,15 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Download, Type, XCircle, ChevronLeft, ChevronRight, RefreshCw, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 // Helper to map PDF.js font names to pdf-lib standard fonts
 const mapFont = (fontName) => {
@@ -42,6 +46,8 @@ const PDFEditor = ({ file, onReset }) => {
   const [extractedItems, setExtractedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDraggingText, setIsDraggingText] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const loadPDF = async () => {
@@ -70,6 +76,7 @@ const PDFEditor = ({ file, onReset }) => {
       const ctx = canvas.getContext('2d');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
+      setCanvasSize({ width: viewport.width, height: viewport.height });
 
       const renderContext = {
         canvasContext: ctx,
@@ -161,6 +168,7 @@ const PDFEditor = ({ file, onReset }) => {
     e.stopPropagation();
     const target = e.currentTarget;
     dragItem.current = id;
+    setIsDraggingText(true);
     dragOffset.current = {
       x: e.clientX - target.getBoundingClientRect().left,
       y: e.clientY - target.getBoundingClientRect().top
@@ -182,6 +190,7 @@ const PDFEditor = ({ file, onReset }) => {
 
   const handlePointerUp = () => {
     dragItem.current = null;
+    setIsDraggingText(false);
   };
 
   useEffect(() => {
@@ -345,7 +354,7 @@ const PDFEditor = ({ file, onReset }) => {
             <canvas ref={canvasRef} style={{ display: 'block', borderRadius: '4px' }} />
             
             {/* Existing Text Edit Layers */}
-            {!dragItem.current && currentExtracted.map(item => (
+            {!isDraggingText && currentExtracted.map(item => (
               <div
                 key={item.id}
                 className={`text-hit-area ${item.isModified ? 'is-modified' : ''} ${editingId === item.id ? 'is-editing' : ''}`}
@@ -396,13 +405,13 @@ const PDFEditor = ({ file, onReset }) => {
             ))}
 
             {/* New Text Boxes Overlay */}
-            {canvasRef.current && currentTexts.map(t => (
+            {canvasSize.width > 0 && currentTexts.map(t => (
               <div 
                 key={t.id}
                 className="absolute-text-container"
                 style={{
-                  left: t.x * canvasRef.current.width,
-                  top: t.y * canvasRef.current.height,
+                  left: t.x * canvasSize.width,
+                  top: t.y * canvasSize.height,
                   position: 'absolute',
                   transform: 'translate(-50%, -50%)'
                 }}

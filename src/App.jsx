@@ -1,6 +1,12 @@
+'use client';
+
 import { useState } from 'react';
-import PDFEditor from './components/PDFEditor';
+import dynamic from 'next/dynamic';
 import { UploadCloud } from 'lucide-react';
+
+const PDFEditor = dynamic(() => import('./components/PDFEditor'), {
+  ssr: false,
+});
 
 function App() {
   const [pdfFile, setPdfFile] = useState(null);
@@ -39,7 +45,7 @@ function App() {
   const preventDefault = (e) => e.preventDefault();
 
   return (
-    <div className="container">
+    <main id="content" className="container" tabIndex={-1}>
       <header className="header">
         <h1>PDFForge Editor</h1>
         <p>Free Fillable PDF Creator: Learn how to make a PDF fillable and generate editable PDFs in seconds.</p>
@@ -112,7 +118,7 @@ function App() {
 
               <section style={{ marginBottom: '2rem' }}>
                 <h3>Can I replace words in an existing PDF?</h3>
-                <p>Yes! If you need to know <strong>how to replace a word with another word in PDF</strong>, our editor provides a unique "click-to-edit" feature. We extract the text layers, allowing you to <strong>generate editable PDF</strong> content directly. You can <strong>change PDF form to fillable</strong> and edit the labels or instructions within the document itself, ensuring a professional <strong>making fillable PDF</strong> experience.</p>
+                <p>Yes! If you need to know <strong>how to replace a word with another word in PDF</strong>, our editor provides a unique &quot;click-to-edit&quot; feature. We extract the text layers, allowing you to <strong>generate editable PDF</strong> content directly. You can <strong>change PDF form to fillable</strong> and edit the labels or instructions within the document itself, ensuring a professional <strong>making fillable PDF</strong> experience.</p>
               </section>
 
               <section style={{ marginBottom: '2rem' }}>
@@ -125,7 +131,7 @@ function App() {
       ) : (
         <PDFEditor file={pdfFile} onReset={() => setPdfFile(null)} />
       )}
-    </div>
+    </main>
   );
 }
 
