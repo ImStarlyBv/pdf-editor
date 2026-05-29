@@ -111,6 +111,36 @@ const getMarginFactor = (customMargin) => {
   }
 };
 
+const getOptionalString = (formData, name) => {
+  const value = formData.get(name)?.toString();
+
+  if (!value || value === 'undefined') {
+    return undefined;
+  }
+
+  return value;
+};
+
+const parsePdfDate = (value) => {
+  if (!value || value === 'undefined') {
+    return undefined;
+  }
+
+  const normalized = value.includes('T') ? value : value.replace(
+    /^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/,
+    '$1-$2-$3T$4:$5:$6',
+  );
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid PDF date: ${value}`);
+  }
+
+  return date;
+};
+
+const formatPdfDate = (date) => (date instanceof Date ? date.toISOString() : null);
+
 const crcTable = new Uint32Array(256).map((_, index) => {
   let value = index;
 
@@ -509,6 +539,84 @@ const addPageNumbers = async ({ files, formData }) => {
     bytes: await document.save(),
     filename: makeOutputFilename(file.name, '_page_numbers_added.pdf'),
     contentType: 'application/pdf',
+  };
+};
+
+const editMetadata = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const deleteAll = getBoolean(formData.get('deleteAll'), false);
+
+  if (deleteAll) {
+    document.setTitle('');
+    document.setAuthor('');
+    document.setSubject('');
+    document.setKeywords([]);
+    document.setCreator('');
+    document.setProducer('');
+  } else {
+    const title = getOptionalString(formData, 'title');
+    const author = getOptionalString(formData, 'author');
+    const subject = getOptionalString(formData, 'subject');
+    const keywords = getOptionalString(formData, 'keywords');
+    const creator = getOptionalString(formData, 'creator');
+    const producer = getOptionalString(formData, 'producer');
+    const creationDate = parsePdfDate(getOptionalString(formData, 'creationDate'));
+    const modificationDate = parsePdfDate(getOptionalString(formData, 'modificationDate'));
+
+    if (title !== undefined) document.setTitle(title);
+    if (author !== undefined) document.setAuthor(author);
+    if (subject !== undefined) document.setSubject(subject);
+    if (keywords !== undefined) {
+      document.setKeywords(keywords.split(',').map((keyword) => keyword.trim()).filter(Boolean));
+    }
+    if (creator !== undefined) document.setCreator(creator);
+    if (producer !== undefined) document.setProducer(producer);
+    if (creationDate !== undefined) document.setCreationDate(creationDate);
+    if (modificationDate !== undefined) document.setModificationDate(modificationDate);
+  }
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_metadata.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const getPdfInfo = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+  const pages = document.getPages();
+  const payload = {
+    BasicInfo: {
+      fileName: file.name,
+      fileSizeBytes: file.size,
+      pageCount: document.getPageCount(),
+    },
+    DocumentInfo: {
+      title: document.getTitle() || null,
+      author: document.getAuthor() || null,
+      subject: document.getSubject() || null,
+      keywords: document.getKeywords() || [],
+      creator: document.getCreator() || null,
+      producer: document.getProducer() || null,
+      creationDate: formatPdfDate(document.getCreationDate()),
+      modificationDate: formatPdfDate(document.getModificationDate()),
+    },
+    PerPageInfo: pages.map((page, index) => ({
+      pageNumber: index + 1,
+      width: page.getWidth(),
+      height: page.getHeight(),
+      rotation: page.getRotation().angle,
+    })),
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'response.json',
+    contentType: 'application/json',
   };
 };
 
@@ -1178,8 +1286,10 @@ const rotatePdf = async ({ files, formData }) => {
 const toolHandlers = {
   addPageNumbers,
   bookletImposition,
+  changeMetadata: editMetadata,
   crop: cropPdf,
   extractPages,
+  getPdfInfo,
   merge: mergePdfs,
   overlayPdfs,
   pageLayout,

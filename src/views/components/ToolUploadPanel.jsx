@@ -74,6 +74,16 @@ function ToolParameterFields({ tool }) {
   const pageNumberFontColorId = useId();
   const pageNumberZeroPadId = useId();
   const pageNumberHelpId = useId();
+  const metadataTitleId = useId();
+  const metadataAuthorId = useId();
+  const metadataSubjectId = useId();
+  const metadataKeywordsId = useId();
+  const metadataCreatorId = useId();
+  const metadataProducerId = useId();
+  const metadataCreationDateId = useId();
+  const metadataModificationDateId = useId();
+  const metadataDeleteAllId = useId();
+  const metadataHelpId = useId();
 
   if (tool.id === 'split') {
     return (
@@ -293,6 +303,54 @@ function ToolParameterFields({ tool }) {
             Use a comma-separated list like 2,5-7. At least one page must remain.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (tool.id === 'changeMetadata') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={metadataTitleId}>Title</label>
+            <input id={metadataTitleId} name="title" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataAuthorId}>Author</label>
+            <input id={metadataAuthorId} name="author" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataSubjectId}>Subject</label>
+            <input id={metadataSubjectId} name="subject" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataKeywordsId}>Keywords</label>
+            <input id={metadataKeywordsId} name="keywords" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataCreatorId}>Creator</label>
+            <input id={metadataCreatorId} name="creator" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataProducerId}>Producer</label>
+            <input id={metadataProducerId} name="producer" type="text" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataCreationDateId}>Creation date</label>
+            <input id={metadataCreationDateId} name="creationDate" type="datetime-local" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={metadataModificationDateId}>Modification date</label>
+            <input id={metadataModificationDateId} name="modificationDate" type="datetime-local" aria-describedby={metadataHelpId} />
+          </div>
+          <div className="field checkbox-field">
+            <input id={metadataDeleteAllId} name="deleteAll" type="checkbox" value="true" />
+            <label htmlFor={metadataDeleteAllId}>Delete standard metadata</label>
+          </div>
+        </div>
+        <p id={metadataHelpId} className="field-help">
+          Empty fields leave existing metadata unchanged unless delete standard metadata is selected.
+        </p>
       </div>
     );
   }
