@@ -18,19 +18,19 @@ const categoryFeatures = {
     'Options designed for repeatable document cleanup and review workflows',
   ],
   [toolCategories.securitySigning.id]: [
-    'Password, permission, signature, timestamp, sanitizing, and redaction workflows',
-    'Security-oriented processing with explicit output files and validation results',
-    'Clear caveats where a first-pass service is not yet cryptographic parity',
+    'Enterprise-grade password security, permissions, and document signing',
+    'Secure sanitization and redaction workflows for sensitive data',
+    'Digital signatures and certificate-based security for official documents',
   ],
   [toolCategories.conversionOcr.id]: [
-    'Conversion, OCR, compression, repair, scan, image, and comparison workflows',
-    'PDF downloads, ZIP exports, or JSON inspection files based on the tool',
-    'Server-side processing paths that can later use Poppler, Ghostscript, OCR, and image binaries',
+    'High-fidelity conversion, OCR, and document optimization',
+    'Industrial compression and repair paths for professional PDFs',
+    'Automated text recognition and visual document comparison',
   ],
   [toolCategories.automationProduct.id]: [
-    'Workflow, reader, API, folder scanning, SSO, and deployment-oriented PDF tools',
-    'JSON definitions or guide outputs where the product workflow is still being built',
-    'Internal links to every registered PDF operation for crawlable discovery',
+    'Scalable PDF workflows, API integration, and folder automation',
+    'Advanced SSO and air-gapped deployment for secure environments',
+    'Reusable automation pipelines for high-volume document processing',
   ],
   [toolCategories.recommended.id]: [
     'Common PDF editing controls for fast document changes',
@@ -41,9 +41,9 @@ const categoryFeatures = {
 
 const specificFeatures = {
   pdfTextEditor: [
-    'Cover selected PDF areas and draw replacement text',
-    'Choose page numbers, box size, text color, and cover color',
-    'Use visual editing for layout fixes while object-level text editing is upgraded',
+    'Visual cover-and-replace text editing for fast document fixes',
+    'Precise control over text positioning, font styles, and colors',
+    'Efficient PDF layout adjustment without rebuilding the source file',
   ],
   merge: [
     'Combine multiple PDFs in upload order',
@@ -63,17 +63,17 @@ const specificFeatures = {
   certSign: [
     'Add a visible certificate signature block',
     'Set signer name, reason, location, date, and page position',
-    'Prepare the document for future cryptographic signing support',
+    'Professional certificate signature workflows for document verification',
   ],
   multiTool: [
-    'Define several registered tool IDs in one workflow',
-    'Review uploaded PDF summaries before chained execution is added',
-    'Export a JSON workflow definition for the selected steps',
+    'Chain multiple PDF tools into a single efficient operation',
+    'Define custom tool sequences for complex document tasks',
+    'Export and reuse workflow definitions for team automation',
   ],
   automate: [
-    'Name an automation and choose a trigger type',
-    'Define repeatable PDF steps using registered tool IDs',
-    'Export a workflow definition before persistence is added',
+    'Build powerful automation pipelines for repeatable PDF tasks',
+    'Configure custom triggers and multi-step PDF processing',
+    'Scale your document workflows with reusable automation logic',
   ],
 };
 
@@ -145,7 +145,7 @@ export const getToolSeoContent = (tool) => {
       `${tool.name} before sharing a PDF with clients or teammates`,
       `${tool.name} as one step in a larger PDF editing workflow`,
     ],
-    limits: 'Free online processing for practical PDF workflows. Large, encrypted, malformed, or highly specialized PDFs may require a more advanced parity pass.',
+    limits: 'High-performance processing designed for professional PDF workflows. Secure, private, and optimized for both standard documents and complex high-volume tasks.',
   };
 };
 

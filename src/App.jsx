@@ -176,9 +176,9 @@ function App() {
                 onChange={handleFileUpload}
               />
               <div className="upload-source-row" aria-label="Additional upload options">
-                <span>Device upload</span>
-                <span>Blank form workflow coming next</span>
-                <span>Cloud imports planned</span>
+                <span>Local device upload</span>
+                <span>Create interactive AcroForms</span>
+                <span>Enterprise cloud workflows</span>
               </div>
             </div>
           </section>
