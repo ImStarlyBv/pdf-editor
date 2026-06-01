@@ -1,131 +1,288 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { UploadCloud } from 'lucide-react';
+import { getToolsByCategory, toolRegistry } from './models/toolRegistry';
+import { toolCategories } from './models/toolCategories';
 
 const PDFEditor = dynamic(() => import('./components/PDFEditor'), {
   ssr: false,
 });
 
+const featuredToolIds = [
+  'pdfTextEditor',
+  'formFill',
+  'merge',
+  'split',
+  'compress',
+  'ocr',
+  'sign',
+  'addPassword',
+];
+
+const formFieldTypes = [
+  'Text boxes for names, dates, totals, and addresses',
+  'Multi-line fields for comments or application answers',
+  'Checkboxes and radio options for approvals and choices',
+  'Dropdown-style fields for controlled responses',
+  'Signature areas for signed PDF forms and agreements',
+  'Links, labels, page numbers, stamps, and helper text',
+];
+
+const workflowSteps = [
+  {
+    title: 'Upload or drop in your PDF',
+    body: 'Start with an existing PDF, a scanned form, or a document exported from Word. The editor keeps the original page layout visible while you prepare fields and text.',
+  },
+  {
+    title: 'Add editable fields and PDF content',
+    body: 'Place fillable PDF fields, update labels, add text, create links, insert signatures, annotate pages, or route the file to a focused PDF tool when the job needs merge, split, OCR, compression, or protection.',
+  },
+  {
+    title: 'Review, save, and reuse the workflow',
+    body: 'Check the finished PDF form, export the edited document, or continue with related tools such as flatten PDF, unlock PDF forms, password protect PDF, and automate PDF.',
+  },
+];
+
+const subTasks = [
+  {
+    title: 'Create a fillable PDF from a flat form',
+    body: 'Convert a static PDF into a writable document by placing fields over blank lines, table cells, signature spaces, and approval boxes.',
+  },
+  {
+    title: 'Edit visible PDF text',
+    body: 'Use visual cover-and-replace editing for quick wording changes, typo fixes, labels, instructions, and form prompts without rebuilding the whole file.',
+  },
+  {
+    title: 'Prepare PDFs made from Word documents',
+    body: 'Export the Word document as a PDF, upload it here, then add fillable fields, checkboxes, signature areas, or links where people need to respond.',
+  },
+  {
+    title: 'Publish cleaner PDF workflows',
+    body: 'Finish form work with compression, page organization, OCR, metadata cleanup, password protection, signing, or reusable multi-tool automation.',
+  },
+];
+
+const faqItems = [
+  {
+    question: 'How do I make a PDF fillable online?',
+    answer:
+      'Upload the PDF, add fields where people need to type or choose an answer, then export the updated file. You can also use related PDF form tools to unlock fields, fill forms, flatten responses, or edit metadata.',
+  },
+  {
+    question: 'Can I create a fillable PDF from a Word document?',
+    answer:
+      'Yes. Save or print the Word document as a PDF first, then use PDFForge to add fillable fields, signature boxes, checkboxes, radio options, links, and helper labels over the preserved layout.',
+  },
+  {
+    question: 'Is this only a fillable PDF creator?',
+    answer:
+      'No. The landing editor focuses on editable and fillable PDFs, while the tool directory covers common PDF tasks such as merge PDF, split PDF, compress PDF, OCR PDF, sign PDF, redact PDF, organize pages, and automate PDF workflows.',
+  },
+  {
+    question: 'Does the PDF text editor rewrite original PDF objects?',
+    answer:
+      'The current text editor is a visual cover-and-replace workflow for reliable page appearance. Object-level PDF text rewriting needs stricter font, encoding, and layout handling and should be added as a separate advanced mode.',
+  },
+];
+
+const groupedTools = getToolsByCategory();
+const featuredTools = featuredToolIds
+  .map((id) => toolRegistry.find((tool) => tool.id === id))
+  .filter(Boolean);
+
 function App() {
   const [pdfFile, setPdfFile] = useState(null);
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const loadPdfFile = (file) => {
     if (file && file.type === 'application/pdf') {
       const reader = new FileReader();
       reader.readAsArrayBuffer(file);
-      reader.onload = (e) => {
+      reader.onload = (event) => {
         setPdfFile({
           name: file.name,
-          data: new Uint8Array(e.target.result)
+          data: new Uint8Array(event.target.result),
         });
       };
     } else {
-      alert("Please upload a valid PDF file.");
+      alert('Please upload a valid PDF file.');
     }
+  };
+
+  const handleFileUpload = (event) => {
+    loadPdfFile(event.target.files[0]);
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
-       const reader = new FileReader();
-       reader.readAsArrayBuffer(file);
-       reader.onload = (e) => {
-         setPdfFile({
-           name: file.name,
-           data: new Uint8Array(e.target.result)
-         });
-       };
-    }
+    loadPdfFile(event.dataTransfer.files[0]);
   };
 
-  const preventDefault = (e) => e.preventDefault();
+  const preventDefault = (event) => event.preventDefault();
 
   return (
-    <main id="content" className="container" tabIndex={-1}>
-      <header className="header">
-        <h1>PDFForge Editor</h1>
-        <p>Free Fillable PDF Creator: Learn how to make a PDF fillable and generate editable PDFs in seconds.</p>
-      </header>
-
+    <main id="content" className="container landing-page" tabIndex={-1}>
       {!pdfFile ? (
         <>
-          <div 
-            className="dropzone"
-            onDrop={handleDrop}
-            onDragOver={preventDefault}
-            onDragEnter={preventDefault}
-            onClick={() => document.getElementById('file-upload').click()}
-          >
-            <UploadCloud className="dropzone-icon" />
-            <h2>Drag & Drop your PDF here</h2>
-            <p>Or click to browse from your device to start making your PDF fillable</p>
-            <input 
-              type="file" 
-              id="file-upload" 
-              accept="application/pdf" 
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-            />
-          </div>
+          <section className="landing-hero" aria-labelledby="landing-title">
+            <div className="landing-hero-copy">
+              <p className="eyebrow">Online PDF editor and form builder</p>
+              <h1 id="landing-title">Create Fillable PDF Online</h1>
+              <p className="landing-subtitle">
+                Build writable PDF forms, edit PDF text visually, add signatures, organize pages, and continue with free online PDF tools for merge, split, compress, OCR, convert, protect, and automate workflows.
+              </p>
+              <ul className="hero-trust-list">
+                <li>Start with an existing PDF form, scanned document, or Word-exported PDF.</li>
+                <li>Use focused tools for editing, forms, page organization, conversion, security, and signing.</li>
+                <li>Files are loaded into the editor in your browser; server tools use task-specific processing.</li>
+              </ul>
+            </div>
 
-          <section className="seo-section">
+            <div
+              className="dropzone landing-upload-panel"
+              onDrop={handleDrop}
+              onDragOver={preventDefault}
+              onDragEnter={preventDefault}
+              onClick={() => document.getElementById('file-upload')?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  document.getElementById('file-upload')?.click();
+                }
+              }}
+            >
+              <UploadCloud className="dropzone-icon" aria-hidden="true" />
+              <h2>Upload PDF to start editing</h2>
+              <p>Drag and drop a PDF or browse your device to make a PDF fillable, add fields, and export an editable document.</p>
+              <input
+                type="file"
+                id="file-upload"
+                accept="application/pdf"
+                className="visually-hidden"
+                onChange={handleFileUpload}
+              />
+              <div className="upload-source-row" aria-label="Additional upload options">
+                <span>Device upload</span>
+                <span>Blank form workflow coming next</span>
+                <span>Cloud imports planned</span>
+              </div>
+            </div>
+          </section>
+
+          <nav className="quick-tool-nav" aria-label="Popular PDF tools">
+            {featuredTools.map((tool) => (
+              <Link key={tool.id} href={`/tools/${tool.slug}`}>
+                {tool.name}
+              </Link>
+            ))}
+          </nav>
+
+          <section className="seo-section landing-how-to" aria-labelledby="how-to-title">
+            <div className="section-heading">
+              <p className="eyebrow">Step-by-step PDF form workflow</p>
+              <h2 id="how-to-title">How to create a fillable PDF form free</h2>
+              <p>
+                The fastest pattern is action first, then details: upload your PDF, add the fields people need, review the page order and text, then export or continue with another PDF tool.
+              </p>
+            </div>
+
+            <ol className="workflow-list">
+              {workflowSteps.map((step) => (
+                <li key={step.title}>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </li>
+              ))}
+            </ol>
+
+            <div className="feature-callout">
+              <h3>Fillable PDF field types and editing actions</h3>
+              <ul>
+                {formFieldTypes.map((fieldType) => (
+                  <li key={fieldType}>{fieldType}</li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <section className="seo-section" aria-labelledby="task-guides-title">
+            <div className="section-heading">
+              <p className="eyebrow">Semantic PDF tasks</p>
+              <h2 id="task-guides-title">Common ways to edit, prepare, and publish PDF documents</h2>
+            </div>
             <div className="seo-grid">
-              <div className="seo-card">
-                <h3>Create & Edit PDFs</h3>
-                <ul>
-                  <li><strong>How to make a PDF fillable:</strong> Simply upload your document and start adding interactive fields.</li>
-                  <li><strong>Generate editable PDF:</strong> Turn any static document into a dynamic, writable file.</li>
-                  <li><strong>Create fillable PDF free:</strong> Our serverless tool allows you to build forms without any subscription.</li>
-                </ul>
-              </div>
-              <div className="seo-card">
-                <h3>Advanced Features</h3>
-                <ul>
-                  <li><strong>How to replace a word with another word in PDF:</strong> Use our direct text editing tool to modify existing content.</li>
-                  <li><strong>Add fillable fields in PDF:</strong> Insert text inputs, checkboxes, and more with ease.</li>
-                  <li><strong>Hyperlink in PDF document:</strong> Enhance your files by adding clickable web links.</li>
-                </ul>
-              </div>
-              <div className="seo-card">
-                <h3>Conversion Tools</h3>
-                <ul>
-                  <li><strong>Convert Word doc to fillable PDF:</strong> Easily change PDF form to fillable after converting from Word.</li>
-                  <li><strong>Word document fillable field:</strong> Learn how to make a word document fillable and export it as a PDF.</li>
-                  <li><strong>How to convert a word document to a fillable PDF:</strong> A step-by-step guide for seamless document workflow.</li>
-                </ul>
-              </div>
+              {subTasks.map((task) => (
+                <article className="seo-card" key={task.title}>
+                  <h3>{task.title}</h3>
+                  <p>{task.body}</p>
+                </article>
+              ))}
             </div>
-            <div className="seo-content-footer" style={{ marginTop: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <p>PDFForge is the ultimate <strong>fillable PDF form creator</strong>. Whether you need to <strong>insert fillable field in PDF</strong>, <strong>making fillable PDF</strong> from scratch, or <strong>change PDF form to fillable</strong>, our tool has you covered. Learn <strong>how to create a fillable PDF</strong> or <strong>how can I create a fillable PDF form</strong> today for free!</p>
+          </section>
+
+          <section className="seo-section tool-directory-section" aria-labelledby="tool-directory-title">
+            <div className="section-heading">
+              <p className="eyebrow">All online PDF tools</p>
+              <h2 id="tool-directory-title">Choose a PDF tool by task</h2>
+              <p>
+                Use these internal links to move from the fillable PDF editor into specialized PDF tools for pages, text, forms, conversion, OCR, signatures, security, and automation.
+              </p>
             </div>
+            <div className="landing-tool-directory">
+              {Object.values(toolCategories).map((category) => {
+                const tools = groupedTools[category.id] || [];
 
-            <article className="seo-detailed-content" style={{ marginTop: '4rem', textAlign: 'left', maxWidth: '900px', margin: '4rem auto' }}>
-              <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Comprehensive Guide: How to Create a Fillable PDF Form</h2>
-              
-              <section style={{ marginBottom: '2rem' }}>
-                <h3>How to make a PDF fillable easily?</h3>
-                <p>To <strong>make a PDF fillable</strong>, simply drag your document into our serverless editor. Our tool allows you to <strong>add fillable fields in PDF</strong> documents instantly. You can <strong>generate editable PDF</strong> files from static ones by overlaying new text or modifying existing lines. This is the most efficient way to <strong>create fillable PDF free</strong> without downloading heavy software.</p>
-              </section>
+                if (tools.length === 0) {
+                  return null;
+                }
 
-              <section style={{ marginBottom: '2rem' }}>
-                <h3>How to create a fillable PDF from a Word document?</h3>
-                <p>If you are wondering <strong>how to convert a word document to a fillable PDF</strong>, the process is simple. First, save your Word file as a PDF. Then, upload it to PDFForge to <strong>insert fillable field in PDF</strong> areas where you need user input. This effectively lets you <strong>convert word form to fillable PDF</strong> while maintaining your original layout. Many users ask <strong>how to make a word document fillable</strong>; the best answer is to use a dedicated <strong>fillable PDF form creator</strong> like ours.</p>
-              </section>
+                return (
+                  <section key={category.id} className="tool-directory-group">
+                    <h3>{category.name}</h3>
+                    <ul>
+                      {tools.slice(0, 10).map((tool) => (
+                        <li key={tool.id}>
+                          <Link href={`/tools/${tool.slug}`}>{tool.name}</Link>
+                          <p>{tool.description}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+          </section>
 
-              <section style={{ marginBottom: '2rem' }}>
-                <h3>Can I replace words in an existing PDF?</h3>
-                <p>Yes! If you need to know <strong>how to replace a word with another word in PDF</strong>, our editor provides a unique &quot;click-to-edit&quot; feature. We extract the text layers, allowing you to <strong>generate editable PDF</strong> content directly. You can <strong>change PDF form to fillable</strong> and edit the labels or instructions within the document itself, ensuring a professional <strong>making fillable PDF</strong> experience.</p>
-              </section>
+          <section className="seo-section faq-section" aria-labelledby="faq-title">
+            <div className="section-heading">
+              <p className="eyebrow">PDF editor questions</p>
+              <h2 id="faq-title">Fillable PDF and online PDF tool FAQ</h2>
+            </div>
+            <div className="faq-list">
+              {faqItems.map((item) => (
+                <details key={item.question}>
+                  <summary>{item.question}</summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </section>
 
-              <section style={{ marginBottom: '2rem' }}>
-                <h3>Professional Writable PDF Document Generation</h3>
-                <p>Our platform is designed for those who need a <strong>writable PDF document</strong> for business or personal use. Whether you are <strong>converting a word form to a fillable PDF form</strong> or looking for <strong>word document fillable field</strong> solutions, our tool provides the flexibility to <strong>add fillable fields to word</strong>-originated PDFs. You can even include a <strong>hyperlink in PDF document</strong> files to direct users to external resources.</p>
-              </section>
-            </article>
+          <section className="final-cta landing-final-cta" aria-labelledby="final-cta-title">
+            <h2 id="final-cta-title">Ready to make a fillable PDF online?</h2>
+            <p>Upload a PDF to start editing, or open a focused PDF tool when you need merge, split, OCR, compression, signing, page cleanup, or automation.</p>
+            <div className="cta-actions">
+              <button className="btn btn-primary" type="button" onClick={() => document.getElementById('file-upload')?.click()}>
+                Upload PDF
+              </button>
+              <Link className="btn btn-secondary" href="/tools/pdf-tools">
+                Browse PDF tools
+              </Link>
+            </div>
           </section>
         </>
       ) : (

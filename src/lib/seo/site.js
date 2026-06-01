@@ -1,6 +1,16 @@
+const normalizeSiteUrl = (url) => {
+  const rawUrl = url || 'https://fillablepdf.online';
+  const parsedUrl = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+  parsedUrl.hostname = parsedUrl.hostname.replace(/^www\./, '');
+  parsedUrl.pathname = '';
+  parsedUrl.search = '';
+  parsedUrl.hash = '';
+  return parsedUrl.toString().replace(/\/$/, '');
+};
+
 export const siteConfig = {
   name: 'PDFForge',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com',
+  url: normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
   description:
     'Free online PDF tools to edit, merge, split, compress, convert, OCR, sign, secure, and organize PDF files.',
 };

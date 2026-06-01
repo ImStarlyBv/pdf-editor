@@ -28,6 +28,7 @@ export default function ToolFooter() {
                   {tools.map((tool) => (
                     <li key={tool.id}>
                       <Link href={`/tools/${tool.slug}`}>{tool.name}</Link>
+                      <p>{tool.description}</p>
                     </li>
                   ))}
                 </ul>

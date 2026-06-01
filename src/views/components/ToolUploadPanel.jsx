@@ -107,6 +107,45 @@ function ToolParameterFields({ tool }) {
   const formFillValuesId = useId();
   const formFillFlattenId = useId();
   const formFillHelpId = useId();
+  const passwordId = useId();
+  const ownerPasswordId = useId();
+  const passwordHelpId = useId();
+  const permissionPrintId = useId();
+  const permissionModifyId = useId();
+  const permissionCopyId = useId();
+  const permissionAnnotateId = useId();
+  const imagePagesId = useId();
+  const imageXId = useId();
+  const imageYId = useId();
+  const imageWidthId = useId();
+  const imageHeightId = useId();
+  const imageOpacityId = useId();
+  const imageRotationId = useId();
+  const imageHelpId = useId();
+  const pdfTextPagesId = useId();
+  const pdfTextReplacementId = useId();
+  const pdfTextXId = useId();
+  const pdfTextYId = useId();
+  const pdfTextWidthId = useId();
+  const pdfTextHeightId = useId();
+  const pdfTextFontSizeId = useId();
+  const pdfTextFontColorId = useId();
+  const pdfTextBackgroundId = useId();
+  const pdfTextHelpId = useId();
+  const certSignerId = useId();
+  const certReasonId = useId();
+  const certLocationId = useId();
+  const certDateId = useId();
+  const certPagesId = useId();
+  const certXId = useId();
+  const certYId = useId();
+  const certWidthId = useId();
+  const certHeightId = useId();
+  const certHelpId = useId();
+  const workflowNameId = useId();
+  const workflowTriggerId = useId();
+  const workflowStepsId = useId();
+  const workflowHelpId = useId();
 
   if (tool.id === 'split') {
     return (
@@ -398,6 +437,178 @@ function ToolParameterFields({ tool }) {
     );
   }
 
+  if (tool.id === 'addImage') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={imagePagesId}>Pages</label>
+            <input id={imagePagesId} name="pages" type="text" defaultValue="1" aria-describedby={imageHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={imageXId}>X</label>
+            <input id={imageXId} name="x" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={imageYId}>Y</label>
+            <input id={imageYId} name="y" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={imageWidthId}>Width</label>
+            <input id={imageWidthId} name="width" type="number" min="1" step="1" defaultValue="96" required />
+          </div>
+          <div className="field">
+            <label htmlFor={imageHeightId}>Height</label>
+            <input id={imageHeightId} name="height" type="number" min="1" step="1" defaultValue="96" required />
+          </div>
+          <div className="field">
+            <label htmlFor={imageOpacityId}>Opacity</label>
+            <input id={imageOpacityId} name="opacity" type="number" min="0" max="1" step="0.05" defaultValue="1" />
+          </div>
+          <div className="field">
+            <label htmlFor={imageRotationId}>Rotation</label>
+            <input id={imageRotationId} name="rotation" type="number" step="1" defaultValue="0" />
+          </div>
+        </div>
+        <p id={imageHelpId} className="field-help">
+          Select the target PDF first, then one PNG or JPEG image. Coordinates are PDF points from the lower-left page corner.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'pdfTextEditor') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field">
+          <label htmlFor={pdfTextReplacementId}>Replacement text</label>
+          <input id={pdfTextReplacementId} name="replacementText" type="text" defaultValue="Edited text" required aria-describedby={pdfTextHelpId} />
+        </div>
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={pdfTextPagesId}>Pages</label>
+            <input id={pdfTextPagesId} name="pages" type="text" defaultValue="1" aria-describedby={pdfTextHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextXId}>X</label>
+            <input id={pdfTextXId} name="x" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextYId}>Y</label>
+            <input id={pdfTextYId} name="y" type="number" min="0" step="1" defaultValue="120" />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextWidthId}>Width</label>
+            <input id={pdfTextWidthId} name="width" type="number" min="1" step="1" defaultValue="240" required />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextHeightId}>Height</label>
+            <input id={pdfTextHeightId} name="height" type="number" min="1" step="1" defaultValue="42" required />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextFontSizeId}>Font size</label>
+            <input id={pdfTextFontSizeId} name="fontSize" type="number" min="1" step="1" defaultValue="14" required />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextFontColorId}>Text color</label>
+            <input id={pdfTextFontColorId} name="fontColor" type="text" defaultValue="#000000" pattern="#?[0-9A-Fa-f]{6}" aria-describedby={pdfTextHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={pdfTextBackgroundId}>Cover color</label>
+            <input id={pdfTextBackgroundId} name="backgroundColor" type="text" defaultValue="#ffffff" pattern="#?[0-9A-Fa-f]{6}" aria-describedby={pdfTextHelpId} />
+          </div>
+        </div>
+        <p id={pdfTextHelpId} className="field-help">
+          This first pass covers the selected area and draws replacement text. Coordinates are PDF points from the lower-left page corner.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'certSign') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={certSignerId}>Signer name</label>
+            <input id={certSignerId} name="signerName" type="text" defaultValue="Certificate signer" required aria-describedby={certHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={certReasonId}>Reason</label>
+            <input id={certReasonId} name="reason" type="text" defaultValue="Document approval" aria-describedby={certHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={certLocationId}>Location</label>
+            <input id={certLocationId} name="location" type="text" aria-describedby={certHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={certDateId}>Signature date</label>
+            <input id={certDateId} name="signatureDate" type="datetime-local" aria-describedby={certHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={certPagesId}>Pages</label>
+            <input id={certPagesId} name="pages" type="text" defaultValue="1" aria-describedby={certHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={certXId}>X</label>
+            <input id={certXId} name="x" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={certYId}>Y</label>
+            <input id={certYId} name="y" type="number" min="0" step="1" defaultValue="72" />
+          </div>
+          <div className="field">
+            <label htmlFor={certWidthId}>Width</label>
+            <input id={certWidthId} name="width" type="number" min="1" step="1" defaultValue="260" required />
+          </div>
+          <div className="field">
+            <label htmlFor={certHeightId}>Height</label>
+            <input id={certHeightId} name="height" type="number" min="1" step="1" defaultValue="92" required />
+          </div>
+        </div>
+        <p id={certHelpId} className="field-help">
+          This first pass adds a visible certificate signature block and signature metadata. Cryptographic signing still needs certificate handling.
+        </p>
+      </div>
+    );
+  }
+
+  if (['multiTool', 'automate'].includes(tool.id)) {
+    return (
+      <div className="tool-parameter-fields">
+        {tool.id === 'automate' ? (
+          <div className="field-grid">
+            <div className="field">
+              <label htmlFor={workflowNameId}>Workflow name</label>
+              <input id={workflowNameId} name="workflowName" type="text" defaultValue="PDF automation" required aria-describedby={workflowHelpId} />
+            </div>
+            <div className="field">
+              <label htmlFor={workflowTriggerId}>Trigger</label>
+              <select id={workflowTriggerId} name="trigger" defaultValue="manual-upload" aria-describedby={workflowHelpId}>
+                <option value="manual-upload">Manual upload</option>
+                <option value="folder-scan">Folder scan</option>
+                <option value="api-call">API call</option>
+              </select>
+            </div>
+          </div>
+        ) : null}
+        <div className="field">
+          <label htmlFor={workflowStepsId}>Workflow steps</label>
+          <textarea
+            id={workflowStepsId}
+            name="workflowSteps"
+            rows={5}
+            defaultValue={tool.id === 'automate' ? 'compress\ngetPdfInfo' : 'getPdfInfo\ncompress'}
+            aria-describedby={workflowHelpId}
+          />
+        </div>
+        <p id={workflowHelpId} className="field-help">
+          Enter one registered tool ID per line, such as compress or getPdfInfo. This pass exports the workflow definition.
+        </p>
+      </div>
+    );
+  }
+
   if (['addText', 'sign', 'watermark', 'addStamp'].includes(tool.id)) {
     const defaults = {
       addText: { text: 'New text', fontSize: 18, color: '#000000', opacity: 1, rotation: 0 },
@@ -508,6 +719,92 @@ function ToolParameterFields({ tool }) {
         </div>
         <p id={formFillHelpId} className="field-help">
           Enter one field per line as fieldName=value, or paste a JSON object with field names and values.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'addPassword') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={passwordId}>Open password</label>
+            <input id={passwordId} name="password" type="password" autoComplete="new-password" minLength={1} required aria-describedby={passwordHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={ownerPasswordId}>Owner password</label>
+            <input id={ownerPasswordId} name="ownerPassword" type="password" autoComplete="new-password" aria-describedby={passwordHelpId} />
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionPrintId} name="allowPrinting" type="checkbox" value="true" defaultChecked />
+            <label htmlFor={permissionPrintId}>Allow printing</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionModifyId} name="allowModify" type="checkbox" value="true" />
+            <label htmlFor={permissionModifyId}>Allow document changes</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionCopyId} name="allowCopy" type="checkbox" value="true" />
+            <label htmlFor={permissionCopyId}>Allow copying text and images</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionAnnotateId} name="allowAnnotate" type="checkbox" value="true" />
+            <label htmlFor={permissionAnnotateId}>Allow annotations and forms</label>
+          </div>
+        </div>
+        <p id={passwordHelpId} className="field-help">
+          Leave owner password empty to reuse the open password. Permissions are enforced by PDF readers that respect encrypted PDF permissions.
+        </p>
+      </div>
+    );
+  }
+
+  if (tool.id === 'removePassword') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field">
+          <label htmlFor={passwordId}>Current password</label>
+          <input id={passwordId} name="password" type="password" autoComplete="current-password" aria-describedby={passwordHelpId} />
+          <p id={passwordHelpId} className="field-help">
+            Enter the password needed to open the PDF. Leave blank only for PDFs that qpdf can decrypt without a password.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (tool.id === 'changePermissions') {
+    return (
+      <div className="tool-parameter-fields">
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor={passwordId}>Open password</label>
+            <input id={passwordId} name="password" type="password" autoComplete="new-password" aria-describedby={passwordHelpId} />
+          </div>
+          <div className="field">
+            <label htmlFor={ownerPasswordId}>Owner password</label>
+            <input id={ownerPasswordId} name="ownerPassword" type="password" autoComplete="new-password" aria-describedby={passwordHelpId} />
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionPrintId} name="allowPrinting" type="checkbox" value="true" defaultChecked />
+            <label htmlFor={permissionPrintId}>Allow printing</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionModifyId} name="allowModify" type="checkbox" value="true" />
+            <label htmlFor={permissionModifyId}>Allow document changes</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionCopyId} name="allowCopy" type="checkbox" value="true" />
+            <label htmlFor={permissionCopyId}>Allow copying text and images</label>
+          </div>
+          <div className="field checkbox-field">
+            <input id={permissionAnnotateId} name="allowAnnotate" type="checkbox" value="true" />
+            <label htmlFor={permissionAnnotateId}>Allow annotations and forms</label>
+          </div>
+        </div>
+        <p id={passwordHelpId} className="field-help">
+          Permission changes are written as 256-bit encrypted PDF permissions. Use an owner password when you need to restrict future edits.
         </p>
       </div>
     );
@@ -732,10 +1029,12 @@ export default function ToolUploadPanel({ tool }) {
 
   const acceptsPdf = tool.acceptedTypes.length === 0 || tool.acceptedTypes.includes('application/pdf');
   const acceptsMultiple = tool.uploadMode === 'multiple';
-  const fileAccept = tool.id === 'addAttachments'
+  const fileAccept = tool.id === 'addImage'
+    ? 'application/pdf,.pdf,image/png,image/jpeg'
+    : tool.id === 'addAttachments'
     ? 'application/pdf,.pdf,text/plain,image/png,image/jpeg,application/octet-stream'
     : acceptsPdf ? 'application/pdf,.pdf' : undefined;
-  const fileRequired = tool.acceptedTypes.length > 0 || tool.id === 'addAttachments';
+  const fileRequired = tool.acceptedTypes.length > 0 || tool.id === 'addAttachments' || tool.id === 'addImage';
   const needsFiles = fileRequired;
 
   const handleSubmit = async (event) => {
@@ -806,6 +1105,8 @@ export default function ToolUploadPanel({ tool }) {
             <p id={helpId} className="field-help">
               {tool.id === 'addAttachments'
                 ? 'Select the target PDF first, then one or more files to embed as attachments.'
+                : tool.id === 'addImage'
+                  ? 'Select the target PDF first, then one PNG or JPEG image to place on the page.'
                 : acceptsMultiple
                   ? 'Select one or more PDF files for this tool.'
                   : 'Select one PDF file for this tool.'}

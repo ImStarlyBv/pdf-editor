@@ -7,6 +7,34 @@ export const getUploadedFiles = async (request) => {
 };
 
 export const validateToolUpload = ({ tool, files }) => {
+  if (tool.id === 'addImage') {
+    if (files.length < 2) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Add Image to PDF requires a PDF file followed by a PNG or JPEG image.',
+      };
+    }
+
+    if (files[0].type !== 'application/pdf') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'The first file must be the PDF that will receive the image.',
+      };
+    }
+
+    if (!['image/png', 'image/jpeg'].includes(files[1].type)) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'The second file must be a PNG or JPEG image.',
+      };
+    }
+
+    return { ok: true };
+  }
+
   if (tool.id === 'addAttachments') {
     if (files.length < 2) {
       return {

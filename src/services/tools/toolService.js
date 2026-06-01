@@ -251,6 +251,51 @@ const runGhostscript = async (args) => {
   throw new Error(`Ghostscript is required for full-page flattening. Tried ${commands.join(', ')}. ${errors.join(' ')}`);
 };
 
+const runQpdf = async (args) => {
+  try {
+    await execFileAsync('qpdf', args, { windowsHide: true });
+  } catch (error) {
+    throw new Error(`qpdf is required for this security operation. ${error.stderr || error.message}`);
+  }
+};
+
+const runQpdfOnUpload = async ({ file, outputSuffix, argsForPaths }) => {
+  const workDir = await mkdtemp(path.join(tmpdir(), `pdf-qpdf-${randomUUID()}-`));
+  const inputPath = path.join(workDir, 'input.pdf');
+  const outputPath = path.join(workDir, 'output.pdf');
+
+  try {
+    await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
+    await runQpdf(argsForPaths({ inputPath, outputPath }));
+
+    return {
+      kind: 'file',
+      bytes: await readFile(outputPath),
+      filename: makeOutputFilename(file.name, outputSuffix),
+      contentType: 'application/pdf',
+    };
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
+};
+
+const runProcessOnUpload = async ({ file, inputName = 'input.pdf', outputName, argsForPaths, command }) => {
+  const workDir = await mkdtemp(path.join(tmpdir(), `pdf-process-${randomUUID()}-`));
+  const inputPath = path.join(workDir, inputName);
+  const outputPath = path.join(workDir, outputName);
+
+  try {
+    await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
+    await execFileAsync(command, argsForPaths({ inputPath, outputPath, workDir }), { windowsHide: true });
+    return readFile(outputPath);
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
+};
+
+const getLatin1Text = async (file) =>
+  new TextDecoder('latin1').decode(new Uint8Array(await file.arrayBuffer()));
+
 const crcTable = new Uint32Array(256).map((_, index) => {
   let value = index;
 
@@ -785,6 +830,123 @@ const addText = async ({ files, formData }) =>
     suffix: '_text_added.pdf',
   });
 
+const pdfTextEditor = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || '1',
+    totalPages: document.getPageCount(),
+    label: 'pages to edit',
+  });
+  const replacementText = formData.get('replacementText')?.toString() || 'Edited text';
+  const x = getNonNegativeNumber({ value: formData.get('x'), fallback: 72, label: 'X position' });
+  const y = getNonNegativeNumber({ value: formData.get('y'), fallback: 120, label: 'Y position' });
+  const width = getPositiveNumber({ value: formData.get('width'), fallback: 240, label: 'Edit box width' });
+  const height = getPositiveNumber({ value: formData.get('height'), fallback: 42, label: 'Edit box height' });
+  const fontSize = getPositiveNumber({ value: formData.get('fontSize'), fallback: 14, label: 'Font size' });
+  const textColor = parseHexColor(formData.get('fontColor')?.toString() || '#000000');
+  const backgroundColor = parseHexColor(formData.get('backgroundColor')?.toString() || '#ffffff');
+  const font = await document.embedFont(getStandardFont(formData.get('fontType')?.toString()));
+
+  pageIndices.forEach((pageIndex) => {
+    const page = document.getPage(pageIndex);
+    page.drawRectangle({
+      x,
+      y,
+      width,
+      height,
+      color: backgroundColor,
+      opacity: 1,
+    });
+    page.drawText(replacementText, {
+      x: x + 8,
+      y: y + Math.max(8, (height - fontSize) / 2),
+      size: fontSize,
+      font,
+      color: textColor,
+      maxWidth: Math.max(1, width - 16),
+      lineHeight: fontSize * 1.25,
+    });
+  });
+
+  document.setSubject('First-pass PDF text editor output. Existing content under edited boxes is visually covered, not object-level rewritten.');
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_text_edited.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const addImage = async ({ files, formData }) => {
+  if (files.length < 2) {
+    throw new Error('Add Image to PDF requires a PDF file followed by a PNG or JPEG image.');
+  }
+
+  const [file, imageFile] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const imageBytes = await imageFile.arrayBuffer();
+  const image = imageFile.type === 'image/png'
+    ? await document.embedPng(imageBytes)
+    : await document.embedJpg(imageBytes);
+  const imageWidth = getPositiveNumber({
+    value: formData.get('width'),
+    fallback: image.width,
+    label: 'Image width',
+  });
+  const imageHeight = getPositiveNumber({
+    value: formData.get('height'),
+    fallback: image.height,
+    label: 'Image height',
+  });
+  const x = getNonNegativeNumber({ value: formData.get('x'), fallback: 72, label: 'X position' });
+  const y = getNonNegativeNumber({ value: formData.get('y'), fallback: 72, label: 'Y position' });
+  const opacity = Math.max(0, Math.min(1, Number(formData.get('opacity') ?? 1)));
+  const rotation = Number(formData.get('rotation') ?? 0);
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || '1',
+    totalPages: document.getPageCount(),
+    label: 'pages',
+  });
+
+  pageIndices.forEach((pageIndex) => {
+    document.getPage(pageIndex).drawImage(image, {
+      x,
+      y,
+      width: imageWidth,
+      height: imageHeight,
+      opacity,
+      rotate: degrees(rotation),
+    });
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_image_added.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const timestampPdf = async ({ files, formData }) => {
+  const timestamp = formData.get('timestamp')?.toString() || new Date().toISOString();
+  const label = formData.get('label')?.toString() || 'Timestamp';
+
+  return drawTextOnPages({
+    files,
+    formData,
+    defaults: {
+      text: `${label}: ${timestamp}`,
+      fontSize: 10,
+      fontColor: '#333333',
+      x: 36,
+      y: 24,
+    },
+    suffix: '_timestamped.pdf',
+  });
+};
+
 const signPdf = async ({ files, formData }) =>
   drawTextOnPages({
     files,
@@ -792,6 +954,75 @@ const signPdf = async ({ files, formData }) =>
     defaults: { text: 'Signed', fontSize: 28, x: 72, y: 72, fontType: 'times' },
     suffix: '_signed.pdf',
   });
+
+const certSignPdf = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const signerName = formData.get('signerName')?.toString() || 'Certificate signer';
+  const reason = formData.get('reason')?.toString() || 'Document approval';
+  const location = formData.get('location')?.toString() || '';
+  const signatureDate = formData.get('signatureDate')?.toString() || new Date().toISOString();
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || '1',
+    totalPages: document.getPageCount(),
+    label: 'signature pages',
+  });
+  const x = getNonNegativeNumber({ value: formData.get('x'), fallback: 72, label: 'X position' });
+  const y = getNonNegativeNumber({ value: formData.get('y'), fallback: 72, label: 'Y position' });
+  const width = getPositiveNumber({ value: formData.get('width'), fallback: 260, label: 'Signature box width' });
+  const height = getPositiveNumber({ value: formData.get('height'), fallback: 92, label: 'Signature box height' });
+  const titleFont = await document.embedFont(StandardFonts.HelveticaBold);
+  const bodyFont = await document.embedFont(StandardFonts.Helvetica);
+  const signatureLines = [
+    'Digitally signed',
+    `Signer: ${signerName}`,
+    `Reason: ${reason}`,
+    location ? `Location: ${location}` : null,
+    `Date: ${signatureDate}`,
+  ].filter(Boolean);
+
+  pageIndices.forEach((pageIndex) => {
+    const page = document.getPage(pageIndex);
+    page.drawRectangle({
+      x,
+      y,
+      width,
+      height,
+      color: rgb(1, 1, 1),
+      borderColor: rgb(0.12, 0.23, 0.42),
+      borderWidth: 1.5,
+      opacity: 0.96,
+    });
+    page.drawText(signatureLines[0], {
+      x: x + 10,
+      y: y + height - 22,
+      size: 12,
+      font: titleFont,
+      color: rgb(0.08, 0.19, 0.38),
+    });
+    signatureLines.slice(1).forEach((line, index) => {
+      page.drawText(line, {
+        x: x + 10,
+        y: y + height - 40 - (index * 14),
+        size: 9,
+        font: bodyFont,
+        color: rgb(0, 0, 0),
+        maxWidth: width - 20,
+      });
+    });
+  });
+
+  document.setAuthor(signerName);
+  document.setSubject(`Certificate signed: ${reason}`);
+  document.setModificationDate(new Date(signatureDate));
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_certificate_signed.pdf'),
+    contentType: 'application/pdf',
+  };
+};
 
 const addWatermark = async ({ files, formData }) =>
   drawTextOnPages({
@@ -901,6 +1132,121 @@ const sanitizePdf = async ({ files }) => {
     kind: 'file',
     bytes: await document.save(),
     filename: makeOutputFilename(file.name, '_sanitized.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const getPermissionValue = (formData, name) =>
+  getBoolean(formData.get(name), true) ? 'y' : 'n';
+
+const addPassword = async ({ files, formData }) => {
+  const [file] = files;
+  const userPassword = formData.get('password')?.toString();
+  const ownerPassword = formData.get('ownerPassword')?.toString() || userPassword;
+
+  if (!userPassword) {
+    throw new Error('Password Protect PDF requires a password.');
+  }
+
+  const allowPrinting = getBoolean(formData.get('allowPrinting'), true) ? 'full' : 'none';
+  const allowModify = getBoolean(formData.get('allowModify'), false) ? 'all' : 'none';
+  const allowCopy = getBoolean(formData.get('allowCopy'), false) ? 'y' : 'n';
+  const allowAnnotate = getBoolean(formData.get('allowAnnotate'), false) ? 'y' : 'n';
+
+  return runQpdfOnUpload({
+    file,
+    outputSuffix: '_protected.pdf',
+    argsForPaths: ({ inputPath, outputPath }) => [
+      '--encrypt',
+      userPassword,
+      ownerPassword,
+      '256',
+      `--print=${allowPrinting}`,
+      `--modify=${allowModify}`,
+      `--extract=${allowCopy}`,
+      `--annotate=${allowAnnotate}`,
+      '--',
+      inputPath,
+      outputPath,
+    ],
+  });
+};
+
+const removePassword = async ({ files, formData }) => {
+  const [file] = files;
+  const password = formData.get('password')?.toString() || '';
+
+  return runQpdfOnUpload({
+    file,
+    outputSuffix: '_unlocked.pdf',
+    argsForPaths: ({ inputPath, outputPath }) => [
+      `--password=${password}`,
+      '--decrypt',
+      inputPath,
+      outputPath,
+    ],
+  });
+};
+
+const changePermissions = async ({ files, formData }) => {
+  const [file] = files;
+  const userPassword = formData.get('password')?.toString() || '';
+  const ownerPassword = formData.get('ownerPassword')?.toString() || randomUUID();
+
+  return runQpdfOnUpload({
+    file,
+    outputSuffix: '_permissions.pdf',
+    argsForPaths: ({ inputPath, outputPath }) => [
+      '--encrypt',
+      userPassword,
+      ownerPassword,
+      '256',
+      `--print=${getBoolean(formData.get('allowPrinting'), true) ? 'full' : 'none'}`,
+      `--modify=${getBoolean(formData.get('allowModify'), false) ? 'all' : 'none'}`,
+      `--extract=${getPermissionValue(formData, 'allowCopy')}`,
+      `--annotate=${getPermissionValue(formData, 'allowAnnotate')}`,
+      '--',
+      inputPath,
+      outputPath,
+    ],
+  });
+};
+
+const validateSignature = async ({ files }) => {
+  const [file] = files;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const source = new TextDecoder('latin1').decode(bytes);
+  const signatureMatches = [...source.matchAll(/\/Type\s*\/Sig\b|\/FT\s*\/Sig\b|\/ByteRange\s*\[/g)];
+  const byteRangeCount = (source.match(/\/ByteRange\s*\[/g) || []).length;
+  const contentsCount = (source.match(/\/Contents\s*<[^>]+>/g) || []).length;
+  const signed = signatureMatches.length > 0 || byteRangeCount > 0;
+  const payload = {
+    filename: file.name,
+    signed,
+    signatureMarkers: signatureMatches.length,
+    byteRangeCount,
+    embeddedSignatureContents: contentsCount,
+    validationLevel: 'structural-scan',
+    caveat: 'This first-pass validation detects PDF signature structures. Full certificate chain, revocation, timestamp, and digest validation still need a dedicated signature verifier.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'signature-validation.json',
+    contentType: 'application/json',
+  };
+};
+
+const removeCertSign = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  clearInteractivePdfEntries(document, { removeAnnotations: true });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_certificate_signature_removed.pdf'),
     contentType: 'application/pdf',
   };
 };
@@ -1233,6 +1579,392 @@ const productGuide = async ({ tool }) => ({
   filename: `${tool.slug}.json`,
   contentType: 'application/json',
 });
+
+const summarizeUploadedPdfs = async (files) =>
+  Promise.all(files.map(async (file) => {
+    try {
+      const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      return {
+        filename: file.name,
+        size: file.size,
+        pageCount: document.getPageCount(),
+      };
+    } catch (error) {
+      return {
+        filename: file.name,
+        size: file.size,
+        error: error.message,
+      };
+    }
+  }));
+
+const parseWorkflowSteps = (value) =>
+  (value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [toolId, rawOptions = ''] = line.split(':').map((part) => part.trim());
+      return {
+        order: index + 1,
+        toolId,
+        options: rawOptions || null,
+      };
+    });
+
+const multiTool = async ({ files, formData }) => {
+  const steps = parseWorkflowSteps(formData.get('workflowSteps')?.toString() || 'getPdfInfo\ncompress');
+  const payload = {
+    status: 'first-pass',
+    mode: 'multi-tool',
+    files: await summarizeUploadedPdfs(files),
+    requestedSteps: steps,
+    runnableNow: false,
+    caveat: 'This first pass validates the multi-tool request and exports the requested workflow. Chained execution still needs a job runner that passes each output into the next registered service.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'multi-tool-workflow.json',
+    contentType: 'application/json',
+  };
+};
+
+const automatePdf = async ({ files, formData }) => {
+  const name = formData.get('workflowName')?.toString() || 'PDF automation';
+  const trigger = formData.get('trigger')?.toString() || 'manual-upload';
+  const steps = parseWorkflowSteps(formData.get('workflowSteps')?.toString() || 'compress\ngetPdfInfo');
+  const payload = {
+    status: 'first-pass',
+    mode: 'automation-definition',
+    name,
+    trigger,
+    files: await summarizeUploadedPdfs(files),
+    steps,
+    persistence: 'not-enabled',
+    caveat: 'This first pass exports an automation definition. Persisted automations, scheduling, folder triggers, and job history should be added with TypeORM when account/workflow storage is introduced.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'automate-pdf-workflow.json',
+    contentType: 'application/json',
+  };
+};
+
+const editTableOfContents = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const rawEntries = formData.get('tocEntries')?.toString() || '';
+  const requestedEntries = rawEntries
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, pageNumber] = line.split('|').map((part) => part.trim());
+      return {
+        title,
+        pageNumber: Number.parseInt(pageNumber || '1', 10),
+      };
+    });
+  const payload = {
+    filename: file.name,
+    pageCount: document.getPageCount(),
+    requestedEntries,
+    status: 'first-pass',
+    caveat: 'This pass validates and exports requested table-of-contents entries. Writing PDF outline objects still needs full bookmark serialization.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'table-of-contents.json',
+    contentType: 'application/json',
+  };
+};
+
+const extractImages = async ({ files }) => {
+  const [file] = files;
+  const source = await getLatin1Text(file);
+  const imageEntries = [];
+  const imagePattern = /<<(?:.|\r|\n){0,2500}?\/Subtype\s*\/Image(?:.|\r|\n){0,2500}?\/Filter\s*\/DCTDecode(?:.|\r|\n)*?>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let match = imagePattern.exec(source);
+
+  while (match) {
+    imageEntries.push({
+      name: `image-${imageEntries.length + 1}.jpg`,
+      bytes: Uint8Array.from(match[1], (char) => char.charCodeAt(0) & 0xff),
+    });
+    match = imagePattern.exec(source);
+  }
+
+  const manifest = {
+    filename: file.name,
+    extractedImages: imageEntries.length,
+    status: 'first-pass',
+    caveat: 'This pass extracts JPEG image streams using DCTDecode markers. PNG, JBIG2, JPX, inline images, masks, and nested form XObjects need deeper parsing.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: createZip([
+      { name: 'images-manifest.json', bytes: textBytes(JSON.stringify(manifest, null, 2)) },
+      ...imageEntries,
+    ]),
+    filename: makeOutputFilename(file.name, '_images.zip'),
+    contentType: 'application/zip',
+  };
+};
+
+const removeImages = async ({ files }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  let removedImages = 0;
+
+  document.getPages().forEach((page) => {
+    const resources = page.node.Resources?.();
+    const xObjectsRef = resources?.get?.(PDFName.of('XObject'));
+    const xObjects = xObjectsRef ? document.context.lookup(xObjectsRef) : null;
+
+    if (!xObjects || typeof xObjects.keys !== 'function') {
+      return;
+    }
+
+    xObjects.keys().forEach((key) => {
+      const value = xObjects.get(key);
+      const xObject = document.context.lookup(value);
+      const subtype = xObject?.dict?.get?.(PDFName.of('Subtype'))?.toString();
+
+      if (subtype === '/Image') {
+        xObjects.delete(key);
+        removedImages += 1;
+      }
+    });
+  });
+
+  document.setSubject(`First-pass image removal removed ${removedImages} page image resources.`);
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_images_removed.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const scannerImageSplit = async ({ files }) => {
+  const [file] = files;
+  const sourceDocument = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const baseName = makeOutputFilename(file.name, '').replace(/\.pdf$/i, '');
+  const entries = [];
+
+  for (const pageIndex of sourceDocument.getPageIndices()) {
+    entries.push({
+      name: `${baseName}_scan_${pageIndex + 1}.pdf`,
+      bytes: await copySelectedPages({ sourceDocument, pageIndices: [pageIndex] }),
+    });
+  }
+
+  return {
+    kind: 'file',
+    bytes: createZip(entries),
+    filename: makeOutputFilename(file.name, '_split_scans.zip'),
+    contentType: 'application/zip',
+  };
+};
+
+const adjustContrast = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const contrast = Number(formData.get('contrast') ?? 1.15);
+  const darken = contrast >= 1;
+  const opacity = Math.min(0.35, Math.abs(contrast - 1) * 0.18);
+
+  document.getPages().forEach((page) => {
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: page.getWidth(),
+      height: page.getHeight(),
+      color: darken ? rgb(0, 0, 0) : rgb(1, 1, 1),
+      opacity,
+    });
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_contrast.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const replaceColor = async ({ files, formData }) => {
+  const [file] = files;
+  const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const overlayColor = parseHexColor(formData.get('replacementColor')?.toString() || '#f8f8f8');
+  const opacity = Math.max(0, Math.min(0.5, Number(formData.get('opacity') ?? 0.12)));
+
+  document.getPages().forEach((page) => {
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: page.getWidth(),
+      height: page.getHeight(),
+      color: overlayColor,
+      opacity,
+    });
+  });
+
+  return {
+    kind: 'file',
+    bytes: await document.save(),
+    filename: makeOutputFilename(file.name, '_colors_replaced.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const extractTextWithFallback = async (file) => {
+  try {
+    const bytes = await runProcessOnUpload({
+      file,
+      outputName: 'output.txt',
+      command: 'pdftotext',
+      argsForPaths: ({ inputPath, outputPath }) => [inputPath, outputPath],
+    });
+    return new TextDecoder().decode(bytes);
+  } catch {
+    const document = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+    return JSON.stringify(getReadableDocumentText(document), null, 2);
+  }
+};
+
+const ocrPdf = async ({ files }) => {
+  const [file] = files;
+  const text = await extractTextWithFallback(file);
+  const payload = {
+    filename: file.name,
+    status: 'first-pass',
+    text,
+    caveat: 'This pass extracts available text with Poppler when present. Full OCR still needs ocrmypdf/tesseract integration to produce a searchable PDF layer.',
+  };
+
+  return {
+    kind: 'file',
+    bytes: textBytes(JSON.stringify(payload, null, 2)),
+    filename: 'ocr-result.json',
+    contentType: 'application/json',
+  };
+};
+
+const convertPdf = async ({ files, formData }) => {
+  const [file] = files;
+  const outputFormat = formData.get('outputFormat')?.toString() || 'txt';
+  const text = await extractTextWithFallback(file);
+
+  if (outputFormat === 'json') {
+    return {
+      kind: 'file',
+      bytes: textBytes(JSON.stringify({ filename: file.name, text }, null, 2)),
+      filename: makeOutputFilename(file.name, '.json'),
+      contentType: 'application/json',
+    };
+  }
+
+  return {
+    kind: 'file',
+    bytes: textBytes(text),
+    filename: makeOutputFilename(file.name, '.txt'),
+    contentType: 'text/plain',
+  };
+};
+
+const redactPdf = async ({ files, formData }) => {
+  const [file] = files;
+  const sourceDocument = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const pageIndices = parsePageNumbers({
+    value: formData.get('pages')?.toString() || '1',
+    totalPages: sourceDocument.getPageCount(),
+    label: 'pages to redact',
+  });
+  const redactedPages = new Set(pageIndices);
+  const outputDocument = await PDFDocument.create();
+  const font = await outputDocument.embedFont(StandardFonts.HelveticaBold);
+  const color = parseHexColor(formData.get('color')?.toString() || '#000000');
+
+  for (const [index, sourcePage] of sourceDocument.getPages().entries()) {
+    if (!redactedPages.has(index)) {
+      const [copiedPage] = await outputDocument.copyPages(sourceDocument, [index]);
+      outputDocument.addPage(copiedPage);
+      continue;
+    }
+
+    const page = outputDocument.addPage([sourcePage.getWidth(), sourcePage.getHeight()]);
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: page.getWidth(),
+      height: page.getHeight(),
+      color,
+    });
+    page.drawText('REDACTED', {
+      x: 36,
+      y: page.getHeight() / 2,
+      size: 28,
+      font,
+      color: rgb(1, 1, 1),
+    });
+  }
+
+  return {
+    kind: 'file',
+    bytes: await outputDocument.save(),
+    filename: makeOutputFilename(file.name, '_redacted.pdf'),
+    contentType: 'application/pdf',
+  };
+};
+
+const scannerEffect = async ({ files }) => {
+  const [file] = files;
+  const sourceDocument = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: false });
+  const outputDocument = await PDFDocument.create();
+
+  for (const sourcePage of sourceDocument.getPages()) {
+    const outputPage = outputDocument.addPage([sourcePage.getWidth(), sourcePage.getHeight()]);
+    const embeddedPage = await outputDocument.embedPage(sourcePage);
+    outputPage.drawRectangle({
+      x: 0,
+      y: 0,
+      width: outputPage.getWidth(),
+      height: outputPage.getHeight(),
+      color: rgb(0.96, 0.96, 0.93),
+    });
+    outputPage.drawPage(embeddedPage, {
+      x: 5,
+      y: 5,
+      width: sourcePage.getWidth() - 10,
+      height: sourcePage.getHeight() - 10,
+    });
+    outputPage.drawRectangle({
+      x: 4,
+      y: 4,
+      width: outputPage.getWidth() - 8,
+      height: outputPage.getHeight() - 8,
+      borderColor: rgb(0.7, 0.7, 0.68),
+      borderWidth: 1,
+      opacity: 0.65,
+    });
+  }
+
+  return {
+    kind: 'file',
+    bytes: await outputDocument.save(),
+    filename: makeOutputFilename(file.name, '_scanner_effect.pdf'),
+    contentType: 'application/pdf',
+  };
+};
 
 const padToMultipleOf4 = (pageCount) => Math.ceil(pageCount / 4) * 4;
 
@@ -1900,12 +2632,18 @@ const rotatePdf = async ({ files, formData }) => {
 const toolHandlers = {
   addStamp,
   addAttachments,
+  addImage,
+  addPassword,
   addText,
   addPageNumbers,
+  adjustContrast,
   annotate: annotatePdf,
   autoRename: autoRenamePdf,
   bookletImposition,
+  automate: automatePdf,
+  certSign: certSignPdf,
   changeMetadata: editMetadata,
+  changePermissions,
   compare: comparePdfs,
   compress: compressPdf,
   crop: cropPdf,
@@ -1913,27 +2651,42 @@ const toolHandlers = {
   devApi: productGuide,
   devFolderScanning: productGuide,
   devSsoGuide: productGuide,
+  convert: convertPdf,
+  editTableOfContents,
+  extractImages,
   extractPages,
   flatten: flattenPdf,
   formFill,
   getPdfInfo,
   merge: mergePdfs,
+  multiTool,
   overlayPdfs,
   pageLayout,
+  pdfTextEditor,
   pdfToSinglePage,
   read: readPdf,
+  redact: redactPdf,
   repair: repairPdf,
+  replaceColor,
   removeBlanks,
   removeAnnotations,
+  removeCertSign,
+  removeImage: removeImages,
   removePages,
+  removePassword,
   reorganizePages,
   rotate: rotatePdf,
   scalePages,
   sanitize: sanitizePdf,
+  scannerEffect,
+  scannerImageSplit,
   showJS: showJavascript,
   sign: signPdf,
   split: splitPdf,
+  ocr: ocrPdf,
+  timestampPdf,
   unlockPDFForms: unlockPdfForms,
+  validateSignature,
   watermark: addWatermark,
 };
 

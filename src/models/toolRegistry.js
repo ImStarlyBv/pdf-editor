@@ -89,6 +89,7 @@ export const toolRegistry = [
     name: 'Add Image to PDF',
     description: 'Add images anywhere in your PDF',
     category: toolCategories.contentEditing.id,
+    uploadMode: 'multiple',
     sourceEndpoint: 'add-image',
   }),
   makeTool({

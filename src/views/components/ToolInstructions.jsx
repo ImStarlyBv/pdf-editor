@@ -1,39 +1,48 @@
+import { getToolSeoContent } from '../../lib/seo/toolSeoContent';
+
 const getActionLabel = (toolName) => toolName.toLowerCase().replace(/\bpdf\b/g, 'PDF');
 
 export default function ToolInstructions({ tool }) {
   const action = getActionLabel(tool.name);
+  const content = getToolSeoContent(tool);
 
   return (
     <section className="tool-content-section" aria-labelledby="how-to-title">
-      <h2 id="how-to-title">How to {action} online</h2>
+      <h2 id="how-to-title">{content.howToTitle}</h2>
       <ol className="instruction-list">
-        <li>
-          <h3>Select your PDF files</h3>
-          <p>
-            Upload the PDF file you want to process. For multi-file tools, add every document in
-            the order you want the tool to use.
-          </p>
-        </li>
-        <li>
-          <h3>Choose your {tool.name.toLowerCase()} options</h3>
-          <p>
-            Configure the settings for {tool.name.toLowerCase()}, review the file list, and apply
-            the operation when everything looks right.
-          </p>
-          <ul>
-            <li>Works with browser uploads and server-side processing.</li>
-            <li>Uses a dedicated backend endpoint at {tool.nextEndpoint}.</li>
-            <li>Designed to preserve file quality while matching the selected tool behavior.</li>
-          </ul>
-        </li>
-        <li>
-          <h3>Download the processed PDF</h3>
-          <p>
-            When processing finishes, download the new file and continue with another PDF tool if
-            your workflow needs more changes.
-          </p>
-        </li>
+        {content.steps.map((step) => (
+          <li key={step.title}>
+            <h3>{step.title}</h3>
+            <p>{step.body}</p>
+            {step.features ? (
+              <ul>
+                {step.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+                <li>Uses a dedicated backend endpoint at {tool.nextEndpoint}.</li>
+              </ul>
+            ) : null}
+          </li>
+        ))}
       </ol>
+
+      <div className="subtask-grid" aria-label={`${tool.name} detailed tutorials`}>
+        {content.subTasks.map((subTask) => (
+          <article key={subTask.title} className="subtask-item">
+            <h3>{subTask.title}</h3>
+            <p>{subTask.body}</p>
+          </article>
+        ))}
+      </div>
+
+      <section className="workflow-section" aria-labelledby="workflow-title">
+        <h3 id="workflow-title">Common {action} workflows</h3>
+        <ul>
+          {content.workflows.map((workflow) => (
+            <li key={workflow}>{workflow}</li>
+          ))}
+        </ul>
+      </section>
     </section>
   );
 }

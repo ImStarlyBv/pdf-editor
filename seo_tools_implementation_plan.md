@@ -48,7 +48,10 @@ Current status after the latest continuation:
   - `Folder Scanning`
   - `SSO Guide`
   - `Air-Gapped PDF Tools`
-- Current backend dispatch coverage is 37 implemented tool handlers out of 58 registered tools.
+- Added 3 more first-pass service translations:
+  - `Add Image to PDF`
+  - `Timestamp PDF`
+  - `Remove Certificate Signature`
 - Added `.dockerignore` to keep local build artifacts, logs, env files, and `node_modules` out of the Docker build context.
 - Refreshed `package-lock.json` so Docker `npm ci` succeeds.
 - Built image `pdf-editor-deploy-check` successfully.
@@ -61,18 +64,48 @@ Current status after the latest continuation:
   - `getPdfInfo`
 - Added `Edit PDF Metadata` service and upload-panel fields.
 - Added `PDF Info` service returning `response.json`.
+- Added 4 more first-pass security service translations:
+  - `Password Protect PDF`
+  - `Remove PDF Password`
+  - `Change PDF Permissions`
+  - `Validate PDF Signature`
+- Added 10 more first-pass service translations:
+  - `Edit PDF Table of Contents`
+  - `Extract Images From PDF`
+  - `Remove Images From PDF`
+  - `Split Scanned PDF`
+  - `Adjust PDF Contrast`
+  - `Replace PDF Colors`
+  - `OCR PDF`
+  - `Convert PDF`
+  - `Redact PDF`
+  - `Scanner Effect PDF`
+- Added the final 4 first-pass service translations:
+  - `PDF Text Editor`
+  - `Multi-Tool`
+  - `Certificate Sign PDF`
+  - `Automate PDF`
+- Current backend dispatch coverage is 58 implemented tool handlers out of 58 registered tools.
+- Remaining unimplemented backend handlers: none.
 - Latest local checks passed:
   - `npm run lint`
   - `npm run build`
   - Docker image build `pdf-editor-deploy-check`
+  - in-memory smoke tests for add image, timestamp PDF, and remove certificate signature
+  - in-memory smoke tests for PDF text editor, certificate sign PDF, multi-tool, and automate PDF
   - in-memory smoke tests for the 10 latest first-pass services
   - in-memory smoke tests for the 10 newly translated first-pass services
   - in-memory smoke tests for edit metadata and PDF info
+  - Docker-based in-memory smoke tests for password protect, remove password, change permissions, and validate signature
+  - in-memory smoke tests for edit table of contents, extract images, remove images, split scanned PDF, adjust contrast, replace colors, OCR, convert, redact, and scanner effect
 
 Current implementation caveats:
 - The latest 10 services are first-pass implementations, not full Stirling parity. Add Text, Sign, Watermark, Stamp, and Annotate draw visible PDF content; Sign does not yet support drawn/image signatures. Sanitize removes common interactive entries, annotations, and standard metadata but is not yet a full defensive sanitizer. Show PDF JavaScript scans PDF source bytes for JavaScript markers and returns JSON; it does not yet parse every object stream variant.
 - Flatten PDF now has a form-only `pdf-lib` path and a Ghostscript full-page raster path. The form-only path was locally smoke-tested; full-page raster flatten requires Ghostscript in the runtime and was not locally smoke-tested on Windows.
 - `PDF Info` is a useful first pass, but not full Stirling parity yet. It still needs encryption, permissions, forms, XMP, compliance, image stats, and deeper per-page details.
+- Password protect, remove password, and change permissions depend on `qpdf`. They were smoke-tested in the Docker runtime image because qpdf is not installed on the Windows host. Validate signature is currently a structural scan for signature markers, not full cryptographic certificate-chain, revocation, timestamp, or digest validation.
+- The latest 10 services are first-pass implementations. Edit table of contents exports validated TOC data but does not yet write PDF outline objects. Extract images scans for JPEG/DCTDecode image streams only. Remove images deletes direct page image XObject resources where possible. OCR extracts available text and returns JSON; it does not yet run full OCR or write a searchable PDF layer. Redact performs true whole-page replacement for selected pages, not area/text redaction parity. Contrast, color replacement, split scanned PDF, and scanner effect use lightweight PDF transformations rather than full image-processing parity.
+- PDF Text Editor covers a selected area and draws replacement text; it does not yet rewrite existing PDF text objects. Certificate Sign PDF adds a visible signature block and metadata; it is not a cryptographic certificate signature yet. Multi-Tool and Automate PDF export workflow definitions as JSON; they do not yet execute chained jobs or persist automations.
 - `Remove Blank Pages From PDF` currently detects structurally empty PDF pages. Full image/text blank-page detection still needs the renderer path.
 - `npm install` reported 2 moderate npm audit findings. No forced audit fix was run because that can introduce breaking dependency changes.
 
@@ -613,16 +646,16 @@ Remaining:
 
 ## Content Editing Services
 Tools:
-- PDF Text Editor
-- Add Text to PDF
-- Add Image to PDF
-- Annotate PDF
-- Add Watermark
-- Add Stamp
-- Add Page Numbers
-- Redact PDF
-- Remove Images From PDF
-- Remove PDF Annotations
+- [x] PDF Text Editor
+- [x] Add Text to PDF
+- [x] Add Image to PDF
+- [x] Annotate PDF
+- [x] Add Watermark
+- [x] Add Stamp
+- [x] Add Page Numbers
+- [x] Redact PDF
+- [x] Remove Images From PDF
+- [x] Remove PDF Annotations
 
 Likely tools/libraries:
 - existing editor logic
@@ -635,30 +668,35 @@ Important:
 
 Completed:
 - Added `Add Text to PDF`. `POST /api/tools/addText` draws configurable text on selected pages.
+- Added `PDF Text Editor`. `POST /api/tools/pdfTextEditor` covers selected regions and draws replacement text as a first-pass edit.
+- Added `Add Image to PDF`. `POST /api/tools/addImage` places a PNG or JPEG image onto selected PDF pages.
 - Added `Sign PDF` typed-signature pass. `POST /api/tools/sign` draws typed signature text on selected pages.
 - Added `Add Watermark`. `POST /api/tools/watermark` draws configurable text watermarks, including opacity and rotation.
 - Added `Add Stamp`. `POST /api/tools/addStamp` draws configurable stamp text on selected pages.
 - Added `Annotate PDF`. `POST /api/tools/annotate` draws highlight-style visible annotations with optional text.
 - Added `Remove PDF Annotations`. `POST /api/tools/removeAnnotations` removes page annotation entries and common interactive catalog actions.
+- Added `Redact PDF`. `POST /api/tools/redact` performs true whole-page replacement for selected pages as a first pass.
+- Added `Remove Images From PDF`. `POST /api/tools/removeImage` removes direct page image XObject resources where possible.
 - Added tool-specific parameter fields to the shared upload panel for add text, sign, watermark, stamp, annotate, and form fill.
 
 Remaining:
 - Upgrade Sign PDF to support drawn signatures and uploaded signature images.
-- Upgrade Add Image to PDF and image watermark/stamp workflows.
+- Upgrade PDF Text Editor to object-level text replacement instead of visual cover-and-replace edits.
+- Upgrade image watermark/stamp workflows beyond the current text-first passes.
 - Upgrade annotations to richer Stirling-style annotation types.
-- Implement true redaction that destroys underlying content.
-- Implement object-level image removal.
+- Upgrade redaction from whole-page replacement to area/text redaction parity.
+- Upgrade image removal to recursive object-level image cleanup.
 
 ## Forms And Metadata Services
 Tools:
-- Fill PDF Form
-- Unlock PDF Forms
-- Flatten PDF
-- Edit PDF Metadata
-- Edit PDF Table of Contents
-- PDF Info
-- Add Attachments To PDF
-- Show PDF JavaScript
+- [x] Fill PDF Form
+- [x] Unlock PDF Forms
+- [x] Flatten PDF
+- [x] Edit PDF Metadata
+- [x] Edit PDF Table of Contents
+- [x] PDF Info
+- [x] Add Attachments To PDF
+- [x] Show PDF JavaScript
 
 Likely tools/libraries:
 - `pdf-lib`
@@ -673,24 +711,25 @@ Completed:
 - Added `Unlock PDF Forms`. `POST /api/tools/unlockPDFForms` clears read-only and required form field flags where supported by `pdf-lib`.
 - Added `Fill PDF Form`. `POST /api/tools/formFill` accepts field values as JSON or `field=value` lines and optionally flattens the filled form.
 - Added `Show PDF JavaScript`. `POST /api/tools/showJS` scans uploaded PDF bytes for JavaScript markers and returns `response.json`.
+- Added `Edit PDF Table of Contents`. `POST /api/tools/editTableOfContents` validates requested TOC entries and returns `table-of-contents.json` as a first pass.
 - Added tool-specific parameter fields to the shared upload panel for edit metadata.
 
 Remaining:
 - Expand PDF Info toward full Stirling parity with encryption, permissions, forms, XMP, compliance, image statistics, and per-page low-level details.
-- Add attachment and table-of-contents services.
+- Upgrade table-of-contents service to write real PDF outline/bookmark objects.
 - Upgrade form and JavaScript tools toward full Stirling parity.
 - Upgrade flatten/unlock form behavior where `pdf-lib` is less complete than PDFBox.
 
 ## Security And Signing Services
 Tools:
-- Password Protect PDF
-- Remove PDF Password
-- Change PDF Permissions
-- Sanitize PDF
-- Certificate Sign PDF
-- Timestamp PDF
-- Validate PDF Signature
-- Remove Certificate Signature
+- [x] Password Protect PDF
+- [x] Remove PDF Password
+- [x] Change PDF Permissions
+- [x] Sanitize PDF
+- [x] Certificate Sign PDF
+- [x] Timestamp PDF
+- [x] Validate PDF Signature
+- [x] Remove Certificate Signature
 
 Likely tools/libraries:
 - `qpdf`
@@ -702,23 +741,36 @@ Important:
 - Signing and validation need careful correctness checks. We should follow Stirling behavior closely and add tests with signed sample PDFs.
 
 Completed:
+- Added `Timestamp PDF`. `POST /api/tools/timestampPdf` draws a timestamp label on selected PDF pages as a first pass.
+- Added `Certificate Sign PDF`. `POST /api/tools/certSign` adds a visible certificate-signature block and metadata as a first pass.
 - Added `Sanitize PDF`. `POST /api/tools/sanitize` removes common catalog action entries, page annotations, form entries, and standard metadata as a first pass.
+- Added `Remove Certificate Signature`. `POST /api/tools/removeCertSign` strips interactive form/action entries and page annotations as a first-pass signature cleanup.
+- Added `Password Protect PDF`. `POST /api/tools/addPassword` uses qpdf 256-bit encryption with open/owner passwords and first-pass print, modify, copy, and annotation permissions.
+- Added `Remove PDF Password`. `POST /api/tools/removePassword` uses qpdf decryption with an optional current password.
+- Added `Change PDF Permissions`. `POST /api/tools/changePermissions` rewrites PDF permission flags with qpdf encryption.
+- Added `Validate PDF Signature`. `POST /api/tools/validateSignature` returns `signature-validation.json` from a structural signature-marker scan.
+- Added tool-specific parameter fields to the shared upload panel for password protection, password removal, and permission changes.
 
 Remaining:
+- Upgrade certificate signing to real cryptographic signing with certificate parsing, digest signing, ByteRange, and validation fixtures.
 - Upgrade sanitize to Stirling-level hidden content, embedded file, JavaScript, metadata, and annotation cleanup.
+- Upgrade timestamp PDF from visible timestamp text to cryptographic timestamp/signature parity where required.
+- Upgrade remove certificate signature to targeted signature-field removal instead of broad interactive-entry cleanup.
+- Upgrade password and permissions behavior toward full Stirling parity, including richer encryption options and clearer owner/user password semantics.
+- Upgrade signature validation to full cryptographic validation with certificate chain, digest, timestamp, and revocation checks.
 
 ## Conversion, OCR, And Image Services
 Tools:
-- Convert PDF
-- OCR PDF
-- Compress PDF
-- Repair PDF
-- Extract Images From PDF
-- Split Scanned PDF
-- Scanner Effect PDF
-- Adjust PDF Contrast
-- Replace PDF Colors
-- Compare PDFs
+- [x] Convert PDF
+- [x] OCR PDF
+- [x] Compress PDF
+- [x] Repair PDF
+- [x] Extract Images From PDF
+- [x] Split Scanned PDF
+- [x] Scanner Effect PDF
+- [x] Adjust PDF Contrast
+- [x] Replace PDF Colors
+- [x] Compare PDFs
 
 Likely tools/libraries:
 - `ghostscript`
@@ -733,21 +785,32 @@ Completed:
 - Added `Compress PDF`. `POST /api/tools/compress` reloads and saves PDFs with object streams enabled.
 - Added `Repair PDF`. `POST /api/tools/repair` reloads and rewrites the PDF structure as a first-pass repair.
 - Added `Compare PDFs`. `POST /api/tools/compare` returns `comparison.json` with page count, metadata, page size, and rotation differences.
+- Added `Extract Images From PDF`. `POST /api/tools/extractImages` returns a ZIP with a manifest and detected JPEG/DCTDecode streams.
+- Added `Split Scanned PDF`. `POST /api/tools/scannerImageSplit` splits each PDF page into a separate PDF inside a ZIP.
+- Added `Adjust PDF Contrast`. `POST /api/tools/adjustContrast` applies a lightweight page overlay as a first-pass contrast effect.
+- Added `Replace PDF Colors`. `POST /api/tools/replaceColor` applies a configurable tint overlay as a first-pass color replacement effect.
+- Added `OCR PDF`. `POST /api/tools/ocr` extracts available text with Poppler when present and returns `ocr-result.json`.
+- Added `Convert PDF`. `POST /api/tools/convert` extracts available text and returns `.txt` or `.json`.
+- Added `Scanner Effect PDF`. `POST /api/tools/scannerEffect` redraws pages with an off-white scanned-paper treatment.
 
 Remaining:
 - Upgrade compression to Ghostscript/qpdf quality profiles.
 - Upgrade repair to qpdf/ghostscript repair paths for malformed PDFs that `pdf-lib` cannot load.
 - Upgrade compare to visual/content diff parity.
+- Upgrade extract images to cover PNG, JBIG2, JPX, inline images, masks, and nested form XObjects.
+- Upgrade OCR to run `ocrmypdf`/Tesseract and produce searchable PDFs.
+- Upgrade convert PDF to full Stirling conversion parity through LibreOffice, Poppler, and image exporters.
+- Upgrade scanner, contrast, and color tools to full raster/image-processing parity.
 
 ## Automation And Product Pages
 Tools:
-- Multi-Tool
-- Read PDF
-- Automate PDF
-- PDF API
-- Folder Scanning
-- SSO Guide
-- Air-Gapped PDF Tools
+- [x] Multi-Tool
+- [x] Read PDF
+- [x] Automate PDF
+- [x] PDF API
+- [x] Folder Scanning
+- [x] SSO Guide
+- [x] Air-Gapped PDF Tools
 
 Implementation:
 - Multi-Tool becomes a workflow UI that chains registered services.
@@ -759,11 +822,15 @@ Implementation:
 Completed:
 - Added `Read PDF`. `POST /api/tools/read` returns `read-pdf.json` with document summary and content stream previews.
 - Added `Auto Rename PDF`. `POST /api/tools/autoRename` returns the uploaded PDF with a filename suggested from PDF title metadata or the original filename.
+- Added `Multi-Tool`. `POST /api/tools/multiTool` returns a validated workflow definition JSON from uploaded PDFs and requested tool IDs.
+- Added `Automate PDF`. `POST /api/tools/automate` returns an automation definition JSON with trigger and step data.
 - Added first-pass JSON guide endpoints for `PDF API`, `Folder Scanning`, `SSO Guide`, and `Air-Gapped PDF Tools`.
 
 Remaining:
 - Upgrade Read PDF to actual text extraction/rendered reader parity.
 - Upgrade Auto Rename PDF to Stirling-level content-based naming.
+- Upgrade Multi-Tool to execute chained registered services and pass outputs between steps.
+- Upgrade Automate PDF to persist workflow definitions and run jobs through the future TypeORM-backed automation layer.
 - Build real product workflows for API docs, folder scanning, SSO, and air-gapped deployment pages.
 
 ## Phase 7: Footer And All-Tools Menu
@@ -792,7 +859,7 @@ Completed:
 - Tools are grouped by category from `toolCategories`.
 
 ## Phase 8: Sejda SEO Pattern Enforcement
-- Status: Started.
+- Status: Done for the generated first-pass enforcement.
 
 Every tool page must include:
 - one H1 targeting the tool's main keyword
@@ -816,11 +883,17 @@ Completed:
 - Added instructional H2 section and step sequence.
 - Added middle CTA, final CTA, related tools, header all-tools menu, and footer all-tools grid.
 - Added semantic landmarks and skip link based on the local modern web guidance.
+- Added reusable generated SEO content in `src/lib/seo/toolSeoContent.js`.
+- Added tool-specific feature lists, workflow copy, and subtask sections to every public tool page.
+- Added JSON-LD `WebApplication` and `BreadcrumbList` structured data for each tool page, based on Google Search Central guidance to use structured data that matches visible page content.
+- Added descriptive text to footer tool links so the all-tools footer follows the Sejda mega-menu SEO pattern.
+- Added conservative Speculation Rules prefetching for `/tools/*` links as a progressive enhancement.
+- Verified generated static HTML contains the SEO copy, JSON-LD, canonical/hreflang links, mega-menu, footer links, and tool-specific sections before hydration.
 
 Remaining:
-- Replace generic instructional copy with deeper tool-specific long-tail copy.
-- Add tool-specific feature bullet lists from Stirling parameters.
-- Add richer Sejda-style keyword sections for each high-value tool.
+- Replace generated first-pass copy with hand-authored long-tail copy for the highest-value tools.
+- Add screenshots or short visual walkthrough media where it helps users understand complex tools.
+- Replace placeholder production domain configuration before launch so canonical and JSON-LD URLs do not use `https://yourdomain.com`.
 
 ## Phase 9: Testing And Validation
 - Status: Started.
@@ -859,6 +932,8 @@ Completed:
 - Ran an in-memory service smoke test for edit metadata and PDF info; edit metadata returned PDF bytes and PDF info returned JSON bytes.
 - Ran an in-memory service smoke test for add text, sign, watermark, stamp, annotate, remove annotations, sanitize, unlock forms, fill form, and show JavaScript; each returned downloadable PDF or JSON bytes, and generated PDFs loaded successfully.
 - Ran an in-memory service smoke test for add attachments, compress, repair, auto rename, compare, read, PDF API, folder scanning, SSO guide, and air-gapped tools; each returned downloadable PDF or JSON bytes, and generated PDFs loaded successfully.
+- Ran an in-memory service smoke test for add image, timestamp PDF, and remove certificate signature; each returned downloadable PDF bytes, and generated PDFs loaded successfully.
+- Ran an in-memory service smoke test for PDF text editor, certificate sign PDF, multi-tool, and automate PDF; each returned downloadable PDF or JSON bytes.
 - Built Docker image `pdf-editor-deploy-check` successfully after lockfile and `.dockerignore` fixes.
 - Ran Docker container on host port `3001` and verified deployed pages plus deployed API calls for merge, add page numbers, edit metadata, and PDF info.
 - Added the official Next ESLint flat config through `eslint-config-next/core-web-vitals`; the previous "Next.js plugin was not detected" warning is resolved.
@@ -868,6 +943,8 @@ Completed:
 - Confirmed `/sitemap.xml` and `/robots.txt` are generated by Next.js.
 - Latest build generated 64 static pages and passed.
 - Latest lint passed after adding the upload UI and controller validation.
+- Latest lint and build passed after applying Sejda/Google SEO page patterns.
+- Verified generated static HTML for representative tool pages includes JSON-LD, tool instructions, feature sections, privacy copy, and all-tools navigation.
 
 Known warning:
 - None from the current lint/build pass.
