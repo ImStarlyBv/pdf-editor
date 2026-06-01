@@ -1,7 +1,7 @@
 export const toolCategories = {
   recommended: {
     id: 'recommended',
-    name: 'Recommended PDF Tools',
+    name: 'Recommended Tools',
   },
   pageStructure: {
     id: 'pageStructure',

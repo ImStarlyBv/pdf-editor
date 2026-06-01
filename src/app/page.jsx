@@ -2,9 +2,9 @@ import App from '../App';
 import { absoluteUrl, siteConfig } from '../lib/seo/site';
 
 export const metadata = {
-  title: 'Create Fillable PDF Online - Make Any PDF Fillable Free',
+  title: 'Create Fillable PDF Online - Make PDF Fillable Free',
   description:
-    'Easily make your PDFs fillable online. Add interactive text fields, checkboxes, and signature spots to any document for free. No signup or watermarks required.',
+    'Make a PDF fillable online. Create interactive PDF forms, add text fields, checkboxes, and signature areas to existing PDFs, then continue with related document tools when needed.',
   alternates: {
     canonical: absoluteUrl('/'),
     languages: {
@@ -13,8 +13,8 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: 'Free Fillable PDF Creator - Make Your Documents Interactive',
-    description: 'Turn static PDFs into interactive forms in seconds. Add fillable fields, checkboxes, and signature areas with our simple online editor.',
+    title: 'Free Fillable PDF Creator - Make Documents Interactive',
+    description: 'Make existing PDFs fillable, add form fields, edit text visually, and continue with focused tools for merge, split, OCR, signing, and cleanup tasks.',
     url: absoluteUrl('/'),
     siteName: siteConfig.name,
     type: 'website',
@@ -38,11 +38,11 @@ export default function HomePage() {
           priceCurrency: 'USD',
         },
         featureList: [
-          'Make any PDF fillable and interactive',
-          'Add text boxes, checkboxes, and radio buttons',
-          'Insert secure signature spots for easy signing',
-          'Works with Word docs and scanned paper forms',
-          'Edit text and organize pages in one place',
+          'Make PDF documents fillable and interactive',
+          'Add text fields, checkboxes, and radio buttons',
+          'Add signature areas to documents',
+          'Prepare Word exports and scanned paper forms',
+          'Edit text visually and organize pages in one place',
         ],
       },
       {
@@ -53,7 +53,7 @@ export default function HomePage() {
             name: 'How do I make a PDF fillable online?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simply upload your PDF and use our form tools to add text boxes, checkboxes, or dropdowns. Once you\'re done, download your new fillable form and it\'s ready to use.',
+              text: 'Upload your PDF, add fields where someone needs to type or choose an answer, then export the updated document. Related tools can unlock fields, fill forms, run OCR, or flatten responses.',
             },
           },
           {
@@ -61,7 +61,7 @@ export default function HomePage() {
             name: 'Can I create a fillable PDF from a Word document?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes! Save your Word file as a PDF first, then bring it to PDFForge. You can then add signature areas and checkboxes right on top of your original document.',
+              text: 'Save your Word file as a PDF first, then bring it to PDFForge. You can add signature areas, checkboxes, and fields over the original layout.',
             },
           },
           {
@@ -69,7 +69,7 @@ export default function HomePage() {
             name: 'Will my fillable forms work in other PDF readers?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes, we create standard PDF forms that work perfectly in Adobe Reader, Chrome, and most other professional PDF software.',
+              text: 'PDFForge is designed around standard PDF form workflows. Test exported forms in the PDF reader your recipients will use before publishing important documents.',
             },
           },
         ],

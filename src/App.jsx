@@ -21,31 +21,31 @@ const formFieldTypes = [
 
 const workflowSteps = [
   {
-    title: 'Upload your file or start fresh',
-    body: 'Bring in an existing PDF, a scanned form, or even a document from Word or Google Docs. Our editor keeps everything in place while you add the fillable parts.',
+    title: 'Upload your document',
+    body: 'Start with an existing PDF, a scanned form, or a document exported from Word or Google Docs. The editor keeps the page layout visible while you add fields and review the file.',
   },
   {
     title: 'Add form fields and edit content',
-    body: 'Drag and drop fillable fields exactly where you need them. You can also update text, add images, or insert signature boxes to make your PDF fully interactive.',
+    body: 'Place fields where people need to type, choose an option, or sign. You can also prepare labels, helper text, annotations, images, and visual text updates.',
   },
   {
-    title: 'Check, save, and share',
-    body: 'Take a quick look at your new fillable form, then download the updated PDF. You can also add a password or flatten fields to keep your data secure.',
+    title: 'Review, export, and continue',
+    body: 'Review the edited document, export the updated file, or continue with a focused tool for flattening, passwords, page cleanup, OCR, signing, or automation.',
   },
 ];
 
 const subTasks = [
   {
     title: 'Turn flat PDFs into interactive forms',
-    body: 'Give life to old documents by adding writable fields over blank lines and signature spaces. It\'s the simplest way to make a PDF fillable without starting over.',
+    body: 'Add writable fields over blank lines and signature spaces so an existing document can collect structured answers.',
   },
   {
     title: 'Make Word docs easy to fill out',
-    body: 'Save your Word document as a PDF and bring it here. Adding checkboxes and text fields takes just a few clicks, making it ready for anyone to fill and sign.',
+    body: 'Export your Word document as a PDF and upload it here to add checkboxes, text fields, and dropdowns over the existing layout.',
   },
   {
     title: 'Better forms for better results',
-    body: 'Set a logical tab order so people can move through your form easily. Adding helpful labels ensures you get the right information every time.',
+    body: 'Use clear labels, logical field placement, and review steps so the form is easier to complete before you share or archive it.',
   },
   {
     title: 'Sign documents in seconds',
@@ -53,7 +53,7 @@ const subTasks = [
   },
   {
     title: 'Ready for any document',
-    body: 'Use our tools for W-9s, rental forms, surveys, and more. If a document needs a response, we can help you make it fillable and easy to use.',
+    body: 'Use form tools for W-9s, rental forms, surveys, and similar documents that need structured responses.',
   },
 ];
 
@@ -61,7 +61,7 @@ const faqItems = [
   {
     question: 'How can I make a PDF fillable online?',
     answer:
-      'Just upload your PDF, click the tools to add text boxes or checkboxes, and save your file. The result is a standard PDF form that works in any PDF viewer.',
+      'Upload your PDF, add fields where someone needs to type or choose an answer, then export the updated document. Use the footer directory when you need a related task such as OCR, signing, compression, or page cleanup.',
   },
   {
     question: 'Can I turn a Word doc into a fillable PDF?',
@@ -76,7 +76,7 @@ const faqItems = [
   {
     question: 'Can I make some fields required?',
     answer:
-      'Definitely. You can mark any field as "Required" so users won\'t accidentally skip important sections when they are filling out your form.',
+      'Use clear labels and field settings where available, then test the exported file in your target PDF reader before publishing the form.',
   },
   {
     question: 'Does this work with scanned paper forms?',
