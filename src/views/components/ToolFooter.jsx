@@ -7,7 +7,7 @@ export default function ToolFooter() {
         <div className="footer-heading">
           <h2>Complete Document Tool Directory</h2>
           <p>
-            Explore our full suite of professional tools. Whether you need to reorganize pages, secure sensitive data, or automate your document workflows, you'll find the right solution in our comprehensive directory below.
+            Explore our full suite of professional tools. Whether you need to reorganize pages, secure sensitive data, or automate your document workflows, you&apos;ll find the right solution in our comprehensive directory below.
           </p>
         </div>
 
