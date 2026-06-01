@@ -10,105 +10,105 @@ const PDFEditor = dynamic(() => import('./components/PDFEditor'), {
 });
 
 const formFieldTypes = [
-  'Text fields for names, dates, amounts, and addresses',
-  'Multi-line text areas for comments, feedback, or long-form answers',
-  'Checkboxes and radio buttons for approvals, options, and multiple choices',
-  'Dropdown menus and list boxes for controlled responses and pick-lists',
-  'Signature fields for digital signatures, initials, and signed agreements',
-  'Interactive elements like links, clickable labels, and helper tooltips',
-  'Functional controls for tab order, field properties, and validation rules',
+  'Easy-to-use text fields for names, dates, and amounts',
+  'Multi-line areas for longer answers and detailed feedback',
+  'Simple checkboxes and radio buttons for quick selections',
+  'Drop-down menus to help users pick from a list of options',
+  'Secure signature boxes for digital and handwritten signatures',
+  'Helpful links, clickable labels, and on-screen tips',
+  'Smart controls to set the field order and basic form rules',
 ];
 
 const workflowSteps = [
   {
-    title: 'Upload your PDF document',
-    body: 'Start with an existing PDF, a scanned paper form, or a document exported from Word or Google Docs. The editor keeps the page layout visible while you add fields and review the file.',
+    title: 'Upload your file or start fresh',
+    body: 'Bring in an existing PDF, a scanned form, or even a document from Word or Google Docs. Our editor keeps everything in place while you add the fillable parts.',
   },
   {
-    title: 'Add interactive fields and form content',
-    body: 'Place fillable PDF fields where people need to type, choose an option, or sign. You can also prepare labels, helper text, annotations, images, and visual text updates.',
+    title: 'Add form fields and edit content',
+    body: 'Drag and drop fillable fields exactly where you need them. You can also update text, add images, or insert signature boxes to make your PDF fully interactive.',
   },
   {
-    title: 'Finalize, protect, and publish',
-    body: 'Review the edited PDF, export the updated document, or continue with a focused tool for flattening, passwords, page cleanup, OCR, signing, or automation.',
+    title: 'Check, save, and share',
+    body: 'Take a quick look at your new fillable form, then download the updated PDF. You can also add a password or flatten fields to keep your data secure.',
   },
 ];
 
 const subTasks = [
   {
-    title: 'Convert static PDF to interactive forms',
-    body: 'Transform "flat" documents into dynamic forms by overlaying writable fields on top of blank lines, boxes, and signature spaces without losing the original formatting.',
+    title: 'Turn flat PDFs into interactive forms',
+    body: 'Give life to old documents by adding writable fields over blank lines and signature spaces. It\'s the simplest way to make a PDF fillable without starting over.',
   },
   {
-    title: 'Make Word documents fillable',
-    body: 'Export your Word document as a PDF and upload it here to add checkboxes, text fields, and dropdowns over the existing layout.',
+    title: 'Make Word docs easy to fill out',
+    body: 'Save your Word document as a PDF and bring it here. Adding checkboxes and text fields takes just a few clicks, making it ready for anyone to fill and sign.',
   },
   {
-    title: 'Optimize PDF forms for better UX',
-    body: 'Use clear labels, logical field placement, and review steps so the form is easier to complete before you share or archive it.',
+    title: 'Better forms for better results',
+    body: 'Set a logical tab order so people can move through your form easily. Adding helpful labels ensures you get the right information every time.',
   },
   {
-    title: 'Sign and collect signatures online',
-    body: 'Add designated signature areas to your PDF. Once fillable, you can send the document for signing or use it as a reusable template for job applications and contracts.',
+    title: 'Sign documents in seconds',
+    body: 'Add clear spots for signatures so your clients know exactly where to sign. It\'s perfect for contracts, job applications, and simple agreements.',
   },
   {
-    title: 'Common use cases for fillable PDFs',
-    body: 'Perfect for W-9 forms, rental agreements, customer surveys, job applications, medical history forms, and any document requiring user input and electronic signatures.',
+    title: 'Ready for any document',
+    body: 'Use our tools for W-9s, rental forms, surveys, and more. If a document needs a response, we can help you make it fillable and easy to use.',
   },
 ];
 
 const faqItems = [
   {
-    question: 'How do I make a PDF fillable online?',
+    question: 'How can I make a PDF fillable online?',
     answer:
-      'Upload your PDF, add fields where someone needs to type or choose an answer, then export the updated document. Use the footer directory when you need a related task such as OCR, signing, compression, or page cleanup.',
+      'Just upload your PDF, click the tools to add text boxes or checkboxes, and save your file. The result is a standard PDF form that works in any PDF viewer.',
   },
   {
-    question: 'Can I create a fillable PDF from a Word document?',
+    question: 'Can I turn a Word doc into a fillable PDF?',
     answer:
-      'Yes. The best workflow is to save your Word document as a PDF first, then upload it to PDFForge to add the interactive fields, signature boxes, and checkboxes over the layout.',
+      'Yes! First, save your Word file as a PDF. Then upload it here to add signature spots, checkboxes, and interactive fields over your original layout.',
   },
   {
-    question: 'How do I add a signature field to my PDF?',
+    question: 'Where can people sign my PDF?',
     answer:
-      'Select the "Signature field" tool and click on the area where you want the user to sign. You can also add your own signature by typing, drawing, or uploading an image of your handwritten signature.',
+      'You can place a "Signature field" anywhere on the page. Users can then type, draw, or upload their signature directly into that spot.',
   },
   {
-    question: 'Can I set fields as "Required" in the PDF?',
+    question: 'Can I make some fields required?',
     answer:
-      'Use clear labels and field settings where available, then test the exported file in your target PDF reader before publishing the form.',
+      'Definitely. You can mark any field as "Required" so users won\'t accidentally skip important sections when they are filling out your form.',
   },
   {
-    question: 'Does this work on scanned documents?',
+    question: 'Does this work with scanned paper forms?',
     answer:
-      'Yes. If your PDF is a scan of a paper form, you can simply overlay fillable fields on top of the scanned image. If you need to make the scanned text searchable first, use our OCR PDF tool before adding form fields.',
+      'Yes. You can place fillable fields right on top of a scanned image. If you need to search the text first, use our OCR tool before adding the form fields.',
   },
 ];
 
 const toolFamilies = [
   {
     title: toolCategories.formsMetadata.name,
-    body: 'Create, fill, flatten, unlock, inspect, and prepare PDF forms and metadata when a document needs structured input.',
+    body: 'Everything you need for PDF forms: create, fill, flatten, and manage document data with ease.',
   },
   {
     title: toolCategories.contentEditing.name,
-    body: 'Add text, signatures, annotations, images, stamps, watermarks, and page numbers when the visible PDF needs edits.',
+    body: 'Quickly add text, signatures, and images, or markup your pages with notes and highlights.',
   },
   {
     title: toolCategories.pageStructure.name,
-    body: 'Merge, split, crop, rotate, extract, reorder, and resize pages when the document structure needs cleanup.',
+    body: 'Organize your document by merging, splitting, rotating, or reordering pages exactly how you want them.',
   },
   {
     title: toolCategories.conversionOcr.name,
-    body: 'Compress, convert, repair, compare, extract images, improve scans, and run OCR when the source file needs processing.',
+    body: 'Professional-grade tools to compress, convert, repair, and turn scanned files into searchable documents.',
   },
   {
     title: toolCategories.securitySigning.name,
-    body: 'Protect, sanitize, redact, sign, timestamp, validate, and update permissions when the PDF needs security controls.',
+    body: 'Keep your information safe with password protection, secure redaction, and official digital signatures.',
   },
   {
     title: toolCategories.automationProduct.name,
-    body: 'Use multi-tool and automation workflows when the same PDF process needs to run repeatedly.',
+    body: 'Save time with powerful automation that can run multiple PDF tasks for you at once.',
   },
 ];
 
