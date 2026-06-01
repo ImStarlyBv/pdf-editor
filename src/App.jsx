@@ -23,45 +23,50 @@ const featuredToolIds = [
 ];
 
 const formFieldTypes = [
-  'Text boxes for names, dates, totals, and addresses',
-  'Multi-line fields for comments or application answers',
-  'Checkboxes and radio options for approvals and choices',
-  'Dropdown-style fields for controlled responses',
-  'Signature areas for signed PDF forms and agreements',
-  'Links, labels, page numbers, stamps, and helper text',
+  'Text fields for names, dates, amounts, and addresses',
+  'Multi-line text areas for comments, feedback, or long-form answers',
+  'Checkboxes and radio buttons for approvals, options, and multiple choices',
+  'Dropdown menus and list boxes for controlled responses and pick-lists',
+  'Signature fields for digital signatures, initials, and signed agreements',
+  'Interactive elements like links, clickable labels, and helper tooltips',
+  'Functional controls for tab order, field properties, and validation rules',
 ];
 
 const workflowSteps = [
   {
-    title: 'Upload or drop in your PDF',
-    body: 'Start with an existing PDF, a scanned form, or a document exported from Word. The editor keeps the original page layout visible while you prepare fields and text.',
+    title: 'Upload your document or start from scratch',
+    body: 'Start with an existing PDF, a scanned paper form, or a document exported from Word or Google Docs. Our editor preserves your layout while you add the interactive layer.',
   },
   {
-    title: 'Add editable fields and PDF content',
-    body: 'Place fillable PDF fields, update labels, add text, create links, insert signatures, annotate pages, or route the file to a focused PDF tool when the job needs merge, split, OCR, compression, or protection.',
+    title: 'Add interactive fields and form content',
+    body: 'Place fillable PDF fields anywhere on the page. Configure field names, set required flags, and adjust fonts. You can also edit existing text, add images, or insert signature boxes.',
   },
   {
-    title: 'Review, save, and reuse the workflow',
-    body: 'Check the finished PDF form, export the edited document, or continue with related tools such as flatten PDF, unlock PDF forms, password protect PDF, and automate PDF.',
+    title: 'Finalize, protect, and publish',
+    body: 'Review your fillable form, export the updated PDF, or continue with specialized tools to flatten fields, password protect the document, or automate your data collection workflow.',
   },
 ];
 
 const subTasks = [
   {
-    title: 'Create a fillable PDF from a flat form',
-    body: 'Convert a static PDF into a writable document by placing fields over blank lines, table cells, signature spaces, and approval boxes.',
+    title: 'Convert static PDF to interactive forms',
+    body: 'Transform "flat" documents into dynamic forms by overlaying writable fields on top of blank lines, boxes, and signature spaces without losing the original formatting.',
   },
   {
-    title: 'Edit visible PDF text',
-    body: 'Use visual cover-and-replace editing for quick wording changes, typo fixes, labels, instructions, and form prompts without rebuilding the whole file.',
+    title: 'Make Word documents fillable',
+    body: 'Export your Word doc as a PDF and upload it here to add checkboxes, text fields, and dropdowns. It\'s the fastest way to create professional PDF forms from a text editor base.',
   },
   {
-    title: 'Prepare PDFs made from Word documents',
-    body: 'Export the Word document as a PDF, upload it here, then add fillable fields, checkboxes, signature areas, or links where people need to respond.',
+    title: 'Optimize PDF forms for better UX',
+    body: 'Configure the tab order so users can navigate between fields logically. Set helper labels and validation rules to ensure you collect accurate data from every respondent.',
   },
   {
-    title: 'Publish cleaner PDF workflows',
-    body: 'Finish form work with compression, page organization, OCR, metadata cleanup, password protection, signing, or reusable multi-tool automation.',
+    title: 'Sign and collect signatures online',
+    body: 'Add designated signature areas to your PDF. Once fillable, you can send the document for signing or use it as a reusable template for job applications and contracts.',
+  },
+  {
+    title: 'Common use cases for fillable PDFs',
+    body: 'Perfect for W-9 forms, rental agreements, customer surveys, job applications, medical history forms, and any document requiring user input and electronic signatures.',
   },
 ];
 
@@ -69,22 +74,27 @@ const faqItems = [
   {
     question: 'How do I make a PDF fillable online?',
     answer:
-      'Upload the PDF, add fields where people need to type or choose an answer, then export the updated file. You can also use related PDF form tools to unlock fields, fill forms, flatten responses, or edit metadata.',
+      'Upload your PDF to our editor, click the form field tools to place text boxes, checkboxes, or dropdowns, and then save your document. Our tool creates standard AcroForms that are compatible with all major PDF readers.',
   },
   {
     question: 'Can I create a fillable PDF from a Word document?',
     answer:
-      'Yes. Save or print the Word document as a PDF first, then use PDFForge to add fillable fields, signature boxes, checkboxes, radio options, links, and helper labels over the preserved layout.',
+      'Yes. The best workflow is to save your Word document as a PDF first, then upload it to PDFForge to add the interactive fields, signature boxes, and checkboxes over the layout.',
   },
   {
-    question: 'Is this only a fillable PDF creator?',
+    question: 'How do I add a signature field to my PDF?',
     answer:
-      'No. The landing editor focuses on editable and fillable PDFs, while the tool directory covers common PDF tasks such as merge PDF, split PDF, compress PDF, OCR PDF, sign PDF, redact PDF, organize pages, and automate PDF workflows.',
+      'Select the "Signature field" tool and click on the area where you want the user to sign. You can also add your own signature by typing, drawing, or uploading an image of your handwritten signature.',
   },
   {
-    question: 'Does the PDF text editor rewrite original PDF objects?',
+    question: 'Can I set fields as "Required" in the PDF?',
     answer:
-      'The current text editor is a visual cover-and-replace workflow for reliable page appearance. Object-level PDF text rewriting needs stricter font, encoding, and layout handling and should be added as a separate advanced mode.',
+      'Absolutely. You can click on any form field to open its properties and mark it as required. This helps ensure that users don\'t skip critical information when filling out your form.',
+  },
+  {
+    question: 'Does this work on scanned documents?',
+    answer:
+      'Yes. If your PDF is a scan of a paper form, you can simply overlay fillable fields on top of the scanned image. If you need to make the scanned text searchable first, use our OCR PDF tool before adding form fields.',
   },
 ];
 
@@ -128,15 +138,15 @@ function App() {
         <>
           <section className="landing-hero" aria-labelledby="landing-title">
             <div className="landing-hero-copy">
-              <p className="eyebrow">Online PDF editor and form builder</p>
+              <p className="eyebrow">Free online PDF forms creator</p>
               <h1 id="landing-title">Create Fillable PDF Online</h1>
               <p className="landing-subtitle">
-                Build writable PDF forms, edit PDF text visually, add signatures, organize pages, and continue with free online PDF tools for merge, split, compress, OCR, convert, protect, and automate workflows.
+                Make existing PDF documents fillable, build interactive forms from scratch, edit PDF text visually, and use free online PDF tools to merge, split, compress, OCR, and automate workflows.
               </p>
               <ul className="hero-trust-list">
-                <li>Start with an existing PDF form, scanned document, or Word-exported PDF.</li>
-                <li>Use focused tools for editing, forms, page organization, conversion, security, and signing.</li>
-                <li>Files are loaded into the editor in your browser; server tools use task-specific processing.</li>
+                <li>Convert static PDFs, Word docs, and scanned forms into dynamic, writable documents.</li>
+                <li>Add text fields, checkboxes, radio buttons, dropdowns, and digital signature areas.</li>
+                <li>Files are processed securely in your browser; server-side tools use private task-specific environments.</li>
               </ul>
             </div>
 
