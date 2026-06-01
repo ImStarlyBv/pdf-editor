@@ -6,11 +6,11 @@ export default function ToolFooter() {
   const groupedTools = getToolsByCategory();
 
   return (
-    <footer className="site-footer">
+    <footer id="all-pdf-tools" className="site-footer">
       <div className="footer-inner">
         <div className="footer-heading">
           <h2>All PDF tools</h2>
-          <p>Every PDFForge tool is linked here for fast navigation and crawlable discovery.</p>
+          <p>Find the PDF tool that matches the task you need to complete.</p>
         </div>
 
         <div className="footer-tools-grid">

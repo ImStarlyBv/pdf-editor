@@ -4,7 +4,7 @@ import { absoluteUrl, siteConfig } from '../lib/seo/site';
 export const metadata = {
   title: 'Create Fillable PDF Online - Make PDF Fillable Free',
   description:
-    'Make PDF fillable online for free. Create interactive PDF forms, add text fields, checkboxes, and signature boxes to existing PDFs. No watermarks or registration required.',
+    'Make a PDF fillable online. Create interactive PDF forms, add text fields, checkboxes, and signature areas to existing PDFs, then continue with related PDF tools when needed.',
   alternates: {
     canonical: absoluteUrl('/'),
     languages: {
@@ -14,7 +14,7 @@ export const metadata = {
   },
   openGraph: {
     title: 'Free Fillable PDF Creator - Make PDF Fillable Online',
-    description: 'Easily make any PDF fillable. Add interactive form fields, edit text visually, and use free PDF tools to merge, split, and sign documents.',
+    description: 'Make existing PDFs fillable, add form fields, edit text visually, and continue with focused PDF tools for merge, split, OCR, signing, and cleanup tasks.',
     url: absoluteUrl('/'),
     siteName: siteConfig.name,
     type: 'website',
@@ -40,7 +40,7 @@ export default function HomePage() {
         featureList: [
           'Make PDF fillable and interactive',
           'Create PDF forms with text fields, checkboxes, and radio buttons',
-          'Add digital signature fields to PDF documents',
+          'Add signature areas to PDF documents',
           'Convert Word and scanned documents to fillable PDF forms',
           'Edit PDF text visually and manage page structure',
         ],
@@ -53,7 +53,7 @@ export default function HomePage() {
             name: 'How do I make a PDF fillable online?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Upload your PDF, use the form field tools to add interactive text boxes, checkboxes, or dropdowns, then export the fillable AcroForm. Related tools can unlock fields, fill forms, or flatten responses.',
+              text: 'Upload your PDF, add fields where someone needs to type or choose an answer, then export the updated document. Related tools can unlock fields, fill forms, run OCR, or flatten responses.',
             },
           },
           {
@@ -69,7 +69,7 @@ export default function HomePage() {
             name: 'Are these PDF forms compatible with Adobe Reader?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes. PDFForge creates standard PDF forms (AcroForms) that are fully compatible with Adobe Acrobat Reader, Chrome, preview, and other professional PDF software.',
+              text: 'PDFForge is designed around standard PDF form workflows. Test exported forms in the PDF reader your recipients will use before publishing important documents.',
             },
           },
         ],

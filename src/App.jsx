@@ -1,26 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { UploadCloud } from 'lucide-react';
-import { getToolsByCategory, toolRegistry } from './models/toolRegistry';
 import { toolCategories } from './models/toolCategories';
 
 const PDFEditor = dynamic(() => import('./components/PDFEditor'), {
   ssr: false,
 });
-
-const featuredToolIds = [
-  'pdfTextEditor',
-  'formFill',
-  'merge',
-  'split',
-  'compress',
-  'ocr',
-  'sign',
-  'addPassword',
-];
 
 const formFieldTypes = [
   'Text fields for names, dates, amounts, and addresses',
@@ -34,16 +21,16 @@ const formFieldTypes = [
 
 const workflowSteps = [
   {
-    title: 'Upload your document or start from scratch',
-    body: 'Start with an existing PDF, a scanned paper form, or a document exported from Word or Google Docs. Our editor preserves your layout while you add the interactive layer.',
+    title: 'Upload your PDF document',
+    body: 'Start with an existing PDF, a scanned paper form, or a document exported from Word or Google Docs. The editor keeps the page layout visible while you add fields and review the file.',
   },
   {
     title: 'Add interactive fields and form content',
-    body: 'Place fillable PDF fields anywhere on the page. Configure field names, set required flags, and adjust fonts. You can also edit existing text, add images, or insert signature boxes.',
+    body: 'Place fillable PDF fields where people need to type, choose an option, or sign. You can also prepare labels, helper text, annotations, images, and visual text updates.',
   },
   {
     title: 'Finalize, protect, and publish',
-    body: 'Review your fillable form, export the updated PDF, or continue with specialized tools to flatten fields, password protect the document, or automate your data collection workflow.',
+    body: 'Review the edited PDF, export the updated document, or continue with a focused tool for flattening, passwords, page cleanup, OCR, signing, or automation.',
   },
 ];
 
@@ -54,11 +41,11 @@ const subTasks = [
   },
   {
     title: 'Make Word documents fillable',
-    body: 'Export your Word doc as a PDF and upload it here to add checkboxes, text fields, and dropdowns. It\'s the fastest way to create professional PDF forms from a text editor base.',
+    body: 'Export your Word document as a PDF and upload it here to add checkboxes, text fields, and dropdowns over the existing layout.',
   },
   {
     title: 'Optimize PDF forms for better UX',
-    body: 'Configure the tab order so users can navigate between fields logically. Set helper labels and validation rules to ensure you collect accurate data from every respondent.',
+    body: 'Use clear labels, logical field placement, and review steps so the form is easier to complete before you share or archive it.',
   },
   {
     title: 'Sign and collect signatures online',
@@ -74,7 +61,7 @@ const faqItems = [
   {
     question: 'How do I make a PDF fillable online?',
     answer:
-      'Upload your PDF to our editor, click the form field tools to place text boxes, checkboxes, or dropdowns, and then save your document. Our tool creates standard AcroForms that are compatible with all major PDF readers.',
+      'Upload your PDF, add fields where someone needs to type or choose an answer, then export the updated document. Use the footer directory when you need a related task such as OCR, signing, compression, or page cleanup.',
   },
   {
     question: 'Can I create a fillable PDF from a Word document?',
@@ -89,7 +76,7 @@ const faqItems = [
   {
     question: 'Can I set fields as "Required" in the PDF?',
     answer:
-      'Absolutely. You can click on any form field to open its properties and mark it as required. This helps ensure that users don\'t skip critical information when filling out your form.',
+      'Use clear labels and field settings where available, then test the exported file in your target PDF reader before publishing the form.',
   },
   {
     question: 'Does this work on scanned documents?',
@@ -98,10 +85,32 @@ const faqItems = [
   },
 ];
 
-const groupedTools = getToolsByCategory();
-const featuredTools = featuredToolIds
-  .map((id) => toolRegistry.find((tool) => tool.id === id))
-  .filter(Boolean);
+const toolFamilies = [
+  {
+    title: toolCategories.formsMetadata.name,
+    body: 'Create, fill, flatten, unlock, inspect, and prepare PDF forms and metadata when a document needs structured input.',
+  },
+  {
+    title: toolCategories.contentEditing.name,
+    body: 'Add text, signatures, annotations, images, stamps, watermarks, and page numbers when the visible PDF needs edits.',
+  },
+  {
+    title: toolCategories.pageStructure.name,
+    body: 'Merge, split, crop, rotate, extract, reorder, and resize pages when the document structure needs cleanup.',
+  },
+  {
+    title: toolCategories.conversionOcr.name,
+    body: 'Compress, convert, repair, compare, extract images, improve scans, and run OCR when the source file needs processing.',
+  },
+  {
+    title: toolCategories.securitySigning.name,
+    body: 'Protect, sanitize, redact, sign, timestamp, validate, and update permissions when the PDF needs security controls.',
+  },
+  {
+    title: toolCategories.automationProduct.name,
+    body: 'Use multi-tool and automation workflows when the same PDF process needs to run repeatedly.',
+  },
+];
 
 function App() {
   const [pdfFile, setPdfFile] = useState(null);
@@ -146,7 +155,7 @@ function App() {
               <ul className="hero-trust-list">
                 <li>Convert static PDFs, Word docs, and scanned forms into dynamic, writable documents.</li>
                 <li>Add text fields, checkboxes, radio buttons, dropdowns, and digital signature areas.</li>
-                <li>Files are processed securely in your browser; server-side tools use private task-specific environments.</li>
+                <li>Use the focused tools for PDF tasks that need extra processing, and review the result before sharing important documents.</li>
               </ul>
             </div>
 
@@ -177,19 +186,11 @@ function App() {
               />
               <div className="upload-source-row" aria-label="Additional upload options">
                 <span>Local device upload</span>
-                <span>Create interactive AcroForms</span>
-                <span>Enterprise cloud workflows</span>
+                <span>Prepare interactive form fields</span>
+                <span>Continue with focused PDF tools</span>
               </div>
             </div>
           </section>
-
-          <nav className="quick-tool-nav" aria-label="Popular PDF tools">
-            {featuredTools.map((tool) => (
-              <Link key={tool.id} href={`/tools/${tool.slug}`}>
-                {tool.name}
-              </Link>
-            ))}
-          </nav>
 
           <section className="seo-section landing-how-to" aria-labelledby="how-to-title">
             <div className="section-heading">
@@ -236,34 +237,19 @@ function App() {
 
           <section className="seo-section tool-directory-section" aria-labelledby="tool-directory-title">
             <div className="section-heading">
-              <p className="eyebrow">All online PDF tools</p>
-              <h2 id="tool-directory-title">Choose a PDF tool by task</h2>
+              <p className="eyebrow">PDF tool categories</p>
+              <h2 id="tool-directory-title">Choose the next PDF task in context</h2>
               <p>
-                Use these internal links to move from the fillable PDF editor into specialized PDF tools for pages, text, forms, conversion, OCR, signatures, security, and automation.
+                The footer contains the complete tool directory. This overview explains what each group is for so the links are useful to people, not repeated as a keyword list.
               </p>
             </div>
             <div className="landing-tool-directory">
-              {Object.values(toolCategories).map((category) => {
-                const tools = groupedTools[category.id] || [];
-
-                if (tools.length === 0) {
-                  return null;
-                }
-
-                return (
-                  <section key={category.id} className="tool-directory-group">
-                    <h3>{category.name}</h3>
-                    <ul>
-                      {tools.slice(0, 10).map((tool) => (
-                        <li key={tool.id}>
-                          <Link href={`/tools/${tool.slug}`}>{tool.name}</Link>
-                          <p>{tool.description}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
+              {toolFamilies.map((family) => (
+                <article key={family.title} className="tool-directory-group">
+                  <h3>{family.title}</h3>
+                  <p>{family.body}</p>
+                </article>
+              ))}
             </div>
           </section>
 
@@ -289,9 +275,9 @@ function App() {
               <button className="btn btn-primary" type="button" onClick={() => document.getElementById('file-upload')?.click()}>
                 Upload PDF
               </button>
-              <Link className="btn btn-secondary" href="/tools/pdf-tools">
+              <a className="btn btn-secondary" href="#all-pdf-tools">
                 Browse PDF tools
-              </Link>
+              </a>
             </div>
           </section>
         </>
